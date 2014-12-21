@@ -1,0 +1,272 @@
+---
+title: "Word Prediction Capstone Project"
+output: html_document 
+---
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, cache=TRUE}
+
+set.seed(3433)
+library(plyr)
+library(ggplot2)
+library(gridExtra)
+library(caret)
+library(tm)
+library(SnowballC)
+library(RColorBrewer)
+library(magrittr)
+library(RWeka)
+library(wordcloud)
+
+```
+
+### Synopsis
+Pervasive computing has seen its share of growth with the advent of smart phones and tablets. These devices provide a pathway to bring intelligence closer to a person. One such intelligence is the concept of predicting words as you type on these devices. It could be as simple as typing a text message or as complex as writing a word document. Regardless of the scenario, the intelligence of predicting words based on what the user has already typed will immensly increase the usability factor, when it comes to using these devices.
+
+The goal of the project is to create such a predictive model, which by learning existing corpus, can provide suggestion to users as they use their smart phone or tablet keypads. The final model will be implemented in the form of an attractive Shiny app and will be avalable for the general public. However, to get to the final model, we'll have to traverse through the following stages/steps:
+
+<ol>
+  <li>Model Creation
+    <ol>
+      <li>Prelimiary Preparation</li>
+      <li>Inspect Provided Dataset</li>
+      <li>PreProcessing</li>
+      <li>Exploratory Analysis</li>
+      <li>Training the Model and Predicting the Outcome</li>
+      <li>Analyze Accuracy of the Model</li>
+    </ol>
+  </li>
+  <li>Applying the Model</li> 
+</ol>
+
+In this paper, I'll discuss Preliminary Preparation, Inspecting Dataset, PreProcessing & Exploratory Analysis. The remaining stages will be discussed in subsequent papers.The dataset for this project is available at this <a href="https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip" target="_blank">location</a>
+
+### Model Creation
+Before a model can be created, the given dataset should be prepared, consumed and explored. Below are the corresponding code snippets and explanations.
+
+
+#### Preliminary Preparation
+The provided Corpus consist of three files which contains English text. We'll use the tm package to read data from these files.
+<ol>
+  <li>en_US.blogs.txt   - contains text from various US blogs.</li>
+  <li>en_US.news.txt    - contains text from various news sites</li>
+  <li>en_US.twitter.txt - contains text from numerous twitter feeds</li>
+</ol>
+
+```{r eval=TRUE, cache=TRUE}
+## It's assumed that the dataset exist in this path ./Data/Corpus/en_us
+filepath = file.path(".", "Data", "Corpus", "en_US")
+
+## Read data from the above three files
+ docs = Corpus(DirSource(filepath))
+ usBlogs = docs[[1]]
+ usNews = docs[[2]]
+ usTwitter = docs[[3]]
+
+```
+
+#### Inspect Provided Dataset
+
+#####Blog Content
+```{r eval=TRUE, cache=FALSE} 
+blogContent = usBlogs[[1]]
+blogContent[1:3]
+```
+
+Total number of lines
+```{r eval=TRUE, cache=FALSE}
+bloglineLength = as.numeric(unlist(lapply(blogContent, nchar)))
+length(bloglineLength)
+```
+
+Longest line and number of characters in that line
+```{r eval=TRUE, cache=FALSE}
+head(order(bloglineLength, decreasing=TRUE),1)
+bloglineLength[head(order(bloglineLength, decreasing=TRUE),1)]
+```
+
+Top 10 Single words
+```{r eval=TRUE, cache=FALSE}
+tk = NGramTokenizer(sample(blogContent,5000), Weka_control(min = 1, max = 1))
+tkSry = table(tk)
+dt = head(tkSry[order(tkSry, decreasing=TRUE)],10)
+df = as.data.frame(dt)
+ggplot(data=df, aes(x=rownames(df), y=dt)) + geom_bar(stat="identity") +  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + xlab("Word")+ ylab("Frequency")
+```
+
+Top 10 Bi-gram words 
+```{r eval=TRUE, cache=FALSE}
+tk = NGramTokenizer(sample(blogContent,5000), Weka_control(min = 2, max = 2))
+tkSry = table(tk)
+dt = head(tkSry[order(tkSry, decreasing=TRUE)],10)
+df = as.data.frame(dt)
+ggplot(data=df, aes(x=rownames(df), y=dt)) + geom_bar(stat="identity") +  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + xlab("Word")+ ylab("Frequency")
+```
+
+
+
+#####News Content
+```{r eval=TRUE, cache=FALSE} 
+newsContent = usNews[[1]]
+newsContent[1:3]
+```
+
+Total number of lines
+```{r eval=TRUE, cache=FALSE}
+newlineLength = as.numeric(unlist(lapply(newsContent, nchar)))
+length(newlineLength)
+```
+
+Longest line and number of characters in that line
+```{r eval=TRUE, cache=FALSE}
+head(order(newlineLength, decreasing=TRUE),1)
+newlineLength[head(order(newlineLength, decreasing=TRUE),1)]
+```
+
+Top 10 Single words
+```{r eval=TRUE, cache=FALSE}
+tk = NGramTokenizer(sample(newsContent,5000), Weka_control(min = 1, max = 1))
+tkSry = table(tk)
+dt = head(tkSry[order(tkSry, decreasing=TRUE)],10)
+df = as.data.frame(dt)
+ggplot(data=df, aes(x=rownames(df), y=dt)) + geom_bar(stat="identity") +  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + xlab("Word")+ ylab("Frequency")
+```
+
+Top 10 Bi-gram words 
+```{r eval=TRUE, cache=FALSE}
+tk = NGramTokenizer(sample(newsContent,5000), Weka_control(min = 2, max = 2))
+tkSry = table(tk)
+dt = head(tkSry[order(tkSry, decreasing=TRUE)],10)
+df = as.data.frame(dt)
+ggplot(data=df, aes(x=rownames(df), y=dt)) + geom_bar(stat="identity") +  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + xlab("Word")+ ylab("Frequency")
+```
+
+#####Twitter Content
+```{r eval=TRUE, cache=FALSE} 
+twitterContent = usTwitter[[1]]
+twitterContent[1:3]
+```
+
+Total number of lines
+```{r eval=TRUE, cache=FALSE}
+twitterlineLength = as.numeric(unlist(lapply(twitterContent, nchar)))
+length(twitterlineLength)
+```
+
+Longest line and number of characters in that line
+```{r eval=TRUE, cache=FALSE}
+head(order(twitterlineLength, decreasing=TRUE),1)
+twitterlineLength[head(order(twitterlineLength, decreasing=TRUE),1)]
+```
+
+Top 10 Single words
+```{r eval=TRUE, cache=FALSE}
+tk = NGramTokenizer(sample(twitterContent,5000), Weka_control(min = 1, max = 1))
+tkSry = table(tk)
+dt = head(tkSry[order(tkSry, decreasing=TRUE)],10)
+df = as.data.frame(dt)
+ggplot(data=df, aes(x=rownames(df), y=dt)) + geom_bar(stat="identity") +  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + xlab("Word")+ ylab("Frequency")
+```
+
+Top 10 Bi-gram words 
+```{r eval=TRUE, cache=FALSE}
+tk = NGramTokenizer(sample(twitterContent,5000), Weka_control(min = 2, max = 2))
+tkSry = table(tk)
+dt = head(tkSry[order(tkSry, decreasing=TRUE)],10)
+df = as.data.frame(dt)
+ggplot(data=df, aes(x=rownames(df), y=dt)) + geom_bar(stat="identity") +  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + xlab("Word")+ ylab("Frequency")
+```
+
+#### PreProcessing
+As you may be aware, the Corpus contains unnecessary words, punctuations, profanity etc. Pre-processing of the data will remedy this problem. Also, including these unwanted data in the final model will skew our prediction results.
+
+Removing characters like /, @, |
+```{r eval=TRUE, cache=TRUE}
+spaceFilter = content_transformer(function(x, pattern) gsub(pattern, " ", x))
+docs = tm_map(docs, spaceFilter, "/|@|\\|")
+
+```
+
+Convert text to lower case, remove numbers, remove punctuations, strip whitespaces
+```{r eval=TRUE, cache=TRUE}
+docs = tm_map(docs, content_transformer(tolower))
+docs = tm_map(docs, removeNumbers)
+docs = tm_map(docs, removePunctuation)
+docs = tm_map(docs, stripWhitespace)
+```
+
+Remove english stop words and perform Stemming - removing common word endings for English, such as 'es', 'ed' and 's'.
+```{r  eval=TRUE, cache=TRUE}
+docs = tm_map(docs, removeWords, stopwords("english"))
+docs = tm_map(docs, stemDocument)
+```
+
+Removing profanity words
+```{r eval=TRUE, cache=TRUE}
+profanity = VectorSource(readLines("Data/en_profanity.txt"))
+docs = tm_map(docs, removeWords, profanity)
+```
+
+
+##### Exploratory Analysis
+Considering the amount of data in each of the contents (blog, news, twitter), it doesn't seem practical to explore the entire content. Hence I'll randomly select 5000 lines from each content that would represent the larger content. Following is the exploration of the subset.
+```{r eval=TRUE, cache=TRUE}
+docs[[1]][[1]] = sample(docs[[1]][[1]],5000)
+docs[[2]][[1]] = sample(docs[[2]][[1]],5000)
+docs[[3]][[1]] = sample(docs[[3]][[1]],5000)
+```
+
+First, create a Document Term Matrix for further exploration.
+```{r eval=TRUE, cache=TRUE}
+dtm = DocumentTermMatrix(docs)
+```
+
+Following is the list of top 25 most commonly occurring words in all three of the documents
+```{r eval=TRUE, cache=TRUE}
+freq = colSums(as.matrix(dtm))
+ord = order(freq)
+dt = freq[tail(ord,n=25)]
+df = as.data.frame(dt)
+ggplot(data=df, aes(x=rownames(df), y=dt)) + geom_bar(stat="identity") +  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + xlab("Word")+ ylab("Frequency")
+
+```
+
+Summary statistics of the top 25 commonly occuring words - the minimum, maximum and median
+```{r eval=TRUE, cache=TRUE}
+summary(df)
+```
+
+
+Words that occur less than 10 times and its frequency distribution. These words may be considered as insignificant and can possibly be removed from the final model.
+```{r eval=TRUE, cache=TRUE}
+freq = colSums(as.matrix(dtm))               
+freqLess10 = freq[which(freq < 10)]
+df = as.data.frame(table(freqLess10))
+ggplot(data=df, aes(x=freqLess10, y=Freq)) + geom_bar(stat="identity") +  xlab("Word Occurrance")+ ylab("Frequency")
+
+```
+
+
+
+Words that occur more than 1000 times
+```{r eval=TRUE, cache=TRUE}
+freq = colSums(as.matrix(dtm))
+dt = freq[which(freq>1000)]
+df = as.data.frame(dt)
+ggplot(data=df, aes(x=rownames(df), y=dt)) + geom_bar(stat="identity") +  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + xlab("Word")+ ylab("Frequency")
+```
+
+
+Word cloud of words that occur more than 500 times
+```{r eval=TRUE, cache=TRUE}
+freq = colSums(as.matrix(dtm))
+wordcloud(names(freq), freq, min.freq=500)
+```
+
+Finally, find those words that occur more than 500 times and create a correlation between the first 10 words whose relationship threshold is 0.5
+```{r eval=TRUE, cache=TRUE, message=FALSE, warning=FALSE}
+plot(dtm, terms=findFreqTerms(dtm, lowfreq=500)[1:10], corThreshold=0.5)
+```
+
+### Conclusion
+As you have seen, exploring a subset of the original dataset has provided some interesting facts about the given Corpus. Armed with this knowledge, we'll proceed to creating the model. Once we have an accurate model, it will be utilized to predict words based on new inputs. The model will be implemented in an intuitive and interactive application which the general public can use. The final product will be an interactive Shiny R application with input fields that the user completes and the application will predict the next word.

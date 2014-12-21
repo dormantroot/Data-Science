@@ -1,0 +1,601 @@
+---
+title: "Word Prediction"
+output: html_document 
+---
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, cache=TRUE}
+set.seed(3433)
+library(plyr)
+library(ggplot2)
+library(gridExtra)
+library(caret)
+library(tm)
+library(SnowballC)
+library(RColorBrewer)
+library(magrittr)
+library(RWeka)
+library(wordcloud)
+library(parallel)
+setwd("C:/Work/datasciencecoursera/Capstone Project/")
+```
+
+
+```{r eval=FALSE, cache=TRUE}
+## It's assumed that the dataset exist in this path ./Data/Corpus/en_us
+filepath = file.path(".", "Data", "en_US")
+
+## Read data from the above three files
+docsOrg = Corpus(DirSource(filepath))
+docs = docsOrg
+
+```
+
+
+#### PreProcessing
+As you may be aware, the Corpus contains unnecessary words, punctuations, profanity etc. Pre-processing of the data will remedy this problem. Also, including these unwanted data in the final model will skew our prediction results.
+
+Removing characters like /, @, |
+```{r eval=FALSE, cache=TRUE}
+spaceFilter = content_transformer(function(x, pattern) gsub(pattern, " ", x))
+docs = tm_map(docs, spaceFilter, "/|@|\\|")
+
+```
+
+custom cleaning
+```{r eval=FALSE}
+clean_up = function(text) {
+    
+    clean.text = removePunctuation(gsub("\032", " ", text))
+    clean.text = gsub("\u2092", "'", clean.text)
+    clean.text = gsub("\u0093|\u0092|\u0094", " ", clean.text) 
+    clean.text = gsub("â€¦", "...", clean.text)
+    clean.text = gsub("â€“", "-", clean.text)
+    clean.text = gsub("â€", "-", clean.text)    
+    clean.text = gsub("â€™", "'", clean.text)  
+    clean.text = gsub("™", " ", clean.text)
+    clean.text = gsub("˜", " ", clean.text)
+    clean.text = gsub("\u2019", "'", clean.text)   
+      
+    clean.text
+}
+
+docs = tm_map(docs, content_transformer(clean_up))
+
+
+```
+
+
+Convert text to lower case, remove numbers, remove punctuations, strip whitespaces
+```{r eval=FALSE, cache=TRUE}
+docs = tm_map(docs, content_transformer(tolower))
+docs = tm_map(docs, removeNumbers)
+docs = tm_map(docs, removePunctuation)
+docs = tm_map(docs, stripWhitespace)
+```
+
+Remove english stop words and perform Stemming - removing common word endings for English, such as 'es', 'ed' and 's'.
+```{r  eval=FALSE, cache=TRUE}
+docs = tm_map(docs, removeWords, stopwords("english"))
+docs = tm_map(docs, stripWhitespace)
+```
+
+Removing profanity words
+```{r eval=FALSE, cache=TRUE}
+profanity = VectorSource(readLines("Data/en_profanity.txt"))
+docs = tm_map(docs, removeWords, profanity)
+```
+
+
+```{r}
+## It's assumed that the dataset exist in this path ./Data/Corpus/en_us
+filepath = file.path(".", "Data", "en_US")
+
+## Read data from the above three files
+docsOrg = Corpus(DirSource(filepath))
+docs = docsOrg
+spaceFilter = content_transformer(function(x, pattern) gsub(pattern, " ", x))
+docs = tm_map(docs, spaceFilter, "/|@|\\|")
+clean_up = function(text) {
+    
+    clean.text = removePunctuation(gsub("\032", " ", text))
+    clean.text = gsub("\u2092", "'", clean.text)
+    clean.text = gsub("\u0093|\u0092|\u0094", " ", clean.text) 
+    clean.text = gsub("â€¦", "...", clean.text)
+    clean.text = gsub("â€“", "-", clean.text)
+    clean.text = gsub("â€", "-", clean.text)    
+    clean.text = gsub("â€™", "'", clean.text)  
+    clean.text = gsub("™", " ", clean.text)
+    clean.text = gsub("˜", " ", clean.text)
+    clean.text = gsub("\u2019", "'", clean.text)   
+      
+    clean.text
+}
+
+docs = tm_map(docs, content_transformer(clean_up))
+docs = tm_map(docs, content_transformer(tolower))
+docs = tm_map(docs, removeNumbers)
+docs = tm_map(docs, removePunctuation)
+docs = tm_map(docs, stripWhitespace)
+docs = tm_map(docs, removeWords, stopwords("english"))
+docs = tm_map(docs, stripWhitespace)
+profanity = VectorSource(readLines("Data/en_profanity.txt"))
+docs = tm_map(docs, removeWords, profanity)
+dtm_uni = DocumentTermMatrix(docs)
+dtm_uni_total = colSums(as.matrix(dtm_uni))
+write.table(dtm_uni_total, file="submit/dtm_uni_total.csv", sep=" ")
+```
+
+
+```{r}
+BigramTokenizer = function(x) NGramTokenizer(x, Weka_control(min = 2, max = 2))
+dtm_bi = DocumentTermMatrix(docs, control = list(tokenize= BigramTokenizer))
+dtm_bi_total = colSums(as.matrix(dtm_bi))
+write.table(dtm_bi_total, file="submit/dtm_bi_total.csv", sep=" ")
+```
+
+
+
+
+
+```{r eval=FALSE, cache=TRUE}
+
+
+# TrigramTokenizer = function(x) NGramTokenizer(x, Weka_control(min = 3, max = 3))
+# BigramTokenizer = function(x) NGramTokenizer(x, Weka_control(min = 2, max = 2))
+# QuadgramTokenizer = function(x) NGramTokenizer(x, Weka_control(min = 4, max = 4))
+# 
+# 
+#dtm_uni = DocumentTermMatrix(docs)
+ dtm_bi = DocumentTermMatrix(docs, control = list(tokenize= BigramTokenizer))
+dtm_bi_total = colSums(as.matrix(dtm_bi))
+write.table(dtm_bi_total, file="final/dtm_bi_total.csv", sep=" ")
+# dtm_tri = DocumentTermMatrix(docs, control = list(tokenize= TrigramTokenizer))
+# dtm_quad = DocumentTermMatrix(docs, control = list(tokenize= QuadgramTokenizer))
+# 
+ dtm_uni_total = colSums(as.matrix(dtm_uni))
+# dtm_bi_total = colSums(as.matrix(dtm_bi))
+# dtm_tri_total = colSums(as.matrix(dtm_tri))
+# dtm_quad_total = colSums(as.matrix(dtm_quad))
+
+# Save everything before continuing
+ write.table(dtm_uni_total, file="final/dtm_uni_total.csv", sep=" ")
+# write.table(dtm_bi_total, file="dtm_bi_total.csv", sep=" ")
+# write.table(dtm_tri_total, file="dtm_tri_total.csv", sep=" ")
+# write.table(dtm_quad_total, file="dtm_quad_total.csv", sep=" ")
+
+```
+
+
+```{r eval=TRUE, cache=FALSE}
+dtm_uni_total = read.csv("final/dtm_uni_total.csv", header = TRUE, sep = " ", stringsAsFactors=FALSE) 
+dtm_uni_total = dtm_uni_total[which(dtm_uni_total$x > 1),]
+# trainIndex <- createDataPartition(dtm_uni_total$x, p = .6, list = FALSE)
+# dtm_uni_total_train = dtm_uni_total[trainIndex,]
+# dtm_uni_total_test = dtm_uni_total[-trainIndex,]
+dtm_uni_total_train = dtm_uni_total
+
+dtm_bi_total = read.csv("dtm_bi_total.csv", header = TRUE, sep = " ", stringsAsFactors=FALSE) 
+dtm_bi_total = dtm_bi_total[which(dtm_bi_total$x >= 4),]
+trainIndex <- createDataPartition(dtm_bi_total$x, p = .8, list = FALSE)
+dtm_bi_total_train =  dtm_bi_total[trainIndex,]
+dtm_bi_total_test = dtm_bi_total[-trainIndex,]
+
+
+# # find only valid words
+# norm = function(x) {  
+#  
+#   for (i in 1:length(x))
+#   {          
+#       filter = getTermFilter("ExactMatchFilter", x[i], TRUE)
+#       termNoun = getIndexTerms("NOUN", 1, filter)
+#       termAdj = getIndexTerms("ADJECTIVE", 1, filter)
+#       termAdv = getIndexTerms("ADVERB", 1, filter)
+#       termVer = getIndexTerms("VERB", 1, filter)
+#       
+#       if((is.null(termNoun) & is.null(termAdj) & is.null(termAdv) & is.null(termVer))){
+#         x[i] = "0"
+#       } else{
+#         x[i] = "1"
+#       }
+#   }
+#   
+#   x
+# }
+
+# A <- function(x) x + 1
+# wifi <- data.frame(replicate(9,1:4))
+# cbind(wifi[1:2], apply(wifi[3],2, norm) )
+
+#cbind(dtm_uni_total_train[10,1:2], apply(dtm_uni_total_train[10,3],2, norm) )
+
+# library(parallel)
+# cl <- makeCluster(detectCores() - 1)
+# clusterEvalQ(cl, { library(wordnet) })
+# 
+# # find only valid words
+# norm = function(x) {  
+#  
+#   for (i in 1:length(x))
+#   {          
+#       filter = getTermFilter("ExactMatchFilter", x[i], TRUE)
+#       termNoun = getIndexTerms("NOUN", 1, filter)
+#       termAdj = getIndexTerms("ADJECTIVE", 1, filter)
+#       termAdv = getIndexTerms("ADVERB", 1, filter)
+#       termVer = getIndexTerms("VERB", 1, filter)
+#       
+#       if((is.null(termNoun) & is.null(termAdj) & is.null(termAdv) & is.null(termVer))){
+#         x[i] = "0"
+#       } else{
+#         x[i] = "1"
+#       }
+#   }
+#   
+#   x
+# }
+# 
+# 
+# 
+# result <- parApply(cl,dtm_uni_total[3],2, norm)
+# stopCluster(cl)
+# save(result ,file="Result.RData")
+```
+
+```{r}
+
+############ valid id
+valid_eng = read.csv("corncob_lowercase.csv", header = TRUE, sep = ",", stringsAsFactors=FALSE)
+words = as.vector(valid_eng$Word)
+
+########### unigram
+dtm_uni_total = read.csv("submit/dtm_uni_total.csv", header = TRUE, sep = " ", stringsAsFactors=FALSE) 
+index = match(dtm_uni_total$word, words, nomatch=-1)
+p = cbind(dtm_uni_total,index)
+p = p[which(p$index >-1),]
+write.table(p, file="submit/dtm_uni_cleaned.csv", sep=" ")
+p = read.csv("submit/dtm_uni_cleaned.csv", header = TRUE, sep = " ", stringsAsFactors=FALSE) 
+
+########### bigram
+#gram 1
+dtm_bi_total = read.csv("submit/dtm_bi_total.csv", header = TRUE, sep = " ", stringsAsFactors=FALSE)
+dtm_bi_total$gram1 = rapply(strsplit(dtm_bi_total$bigram, " "), function(x) head(x, 1))
+gram1Ind = match(dtm_bi_total$gram1, words, nomatch=-1)
+q = cbind(dtm_bi_total,gram1Ind)
+q = q[which(q$gram1Ind >-1),]
+
+#gram 2
+q$gram2 = rapply(strsplit(q$bigram, " "), function(x) tail(x, 1))
+gram2Ind = match(q$gram2, words, nomatch=-1)
+q = cbind(q,gram2Ind)
+q = q[which(q$gram2Ind >-1),]
+q = q[which(q$gram1Ind!=q$gram2Ind),]
+write.table(q, file="submit/dtm_bi_cleaned.csv", sep=" ")
+q = read.csv("submit/dtm_bi_cleaned.csv", header = TRUE, sep = " ", stringsAsFactors=FALSE) 
+q = rename(q, c("x"="bFreq"))
+
+
+
+# combining and calculating probability
+uFreqInd = match(q$gram1Ind, p$index, nomatch=-1)
+q = cbind(q,ind=uFreqInd)
+q = q[which(q$ind>-1),]
+q = cbind(q[,1:6], uFreq = p[q$ind,c("x")])
+q = cbind(q, prob=round(((-1)*(log(q$bFreq/q$uFreq))), digits=3))
+pro = cbind(q$gram1Ind,q$gram2Ind,q$prob)
+pro = as.data.frame(pro)
+write.table(pro, file="submit/prob_to_shrink.csv", sep=" ")
+
+
+
+uFreqInd = uFreqInd[which(uFreqInd>-1)]
+m = cbind(m,uFreq = p[uFreqInd, c("x")])
+uFreqInd = match(q$gram1Ind, p$index, nomatch=-1)
+q = cbind(q, uFreq = p[uFreqInd, c("x")])
+
+dtm_bi_total$cocant = sapply(dtm_bi_total, function(x) paste(dtm_bi_total$bigram,":",dtm_bi_total$freq,sep=""))[,1]
+#create a valid gram1 index
+gram1Indx = match(dtm_bi_total$gram1, words, nomatch=-1)
+k = cbind(dtm_bi_total,gram1Indx)
+k = k[which(k$gram1Indx > -1),]
+
+#create valid gram2 index
+gram2Indx = match(k$gram2, words, nomatch=-1)
+k = cbind(k,gram2Indx)
+k = k[which(k$gram2Indx > -1),]
+
+write.table(k, file="final/dtm_bi_cleaned.csv", sep=" ")
+
+
+```
+
+
+```{r}
+# calculate probability
+dtm_uni_clean = read.csv("final/dtm_uni_cleaned.csv", header = TRUE, sep = " ", stringsAsFactors=FALSE) 
+dtm_bi_clean = read.csv("final/dtm_bi_cleaned.csv", header = TRUE, sep = " ", stringsAsFactors=FALSE) 
+valid_eng = read.csv("corncob_lowercase.csv", header = TRUE, sep = ",", stringsAsFactors=FALSE)
+```
+
+
+
+```{r eval=TRUE, cache=TRUE}
+trim = function (x) gsub("^\\s+|\\s+$", "", x)
+
+dtm_bi_total_train$gram1 = rapply(strsplit(dtm_bi_total_train$gram, " "), function(x) head(x, 1))
+dtm_bi_total_train$gram2 = rapply(strsplit(dtm_bi_total_train$gram, " "), function(x) tail(x, 1))
+dtm_bi_total_train$cocant = sapply(dtm_bi_total_train, function(x) paste(dtm_bi_total_train$gram,":",dtm_bi_total_train$x,sep=""))[,1]
+
+dtm_bi_total_train = read.csv("bigram_final.csv", header = TRUE, sep = ",", stringsAsFactors=FALSE) 
+dtm_bi_total_train = dtm_bi_total_train[which(dtm_bi_total_train$gram2.1 == 1),]
+dtm_bi_total_train = subset(dtm_bi_total_train, gram1 != gram2,  select=c(gram,x, gram1, gram2))
+valid_eng = read.csv("corncob_lowercase.csv", header = TRUE, sep = ",", stringsAsFactors=FALSE)
+dtm_bi_total_train$gram2 = rapply(strsplit(dtm_bi_total_train$gram2, "˜"), function(x) tail(x, 1))
+
+dtm_uni_total$gram = rapply(strsplit(dtm_uni_total$gram, "˜"), function(x) tail(x, 1))
+
+# calculate if word is valid
+norm = function(x) {
+  
+  for (i in 1:length(x))
+  {          
+        unigram = x[i]
+#         filter = getTermFilter("ExactMatchFilter", x[i], TRUE)
+#         termNoun = getIndexTerms("NOUN", 1, filter)
+#         termAdj = getIndexTerms("ADJECTIVE", 1, filter)
+#         termAdv = getIndexTerms("ADVERB", 1, filter)
+#         termVer = getIndexTerms("VERB", 1, filter)
+    
+        if(length(valid_eng[valid_eng$Word==unigram,]) == 0){
+          x[i] = 0
+        } else{
+          x[i] = 1
+        }      
+      
+       print(paste(i,":",unigram,":",x[i]))  
+  } 
+  x
+}
+
+#cbind(dtm_bi_total_train[8075264,1:4], apply(dtm_bi_total_train[8075264,3],2, norm))
+
+dtm_bi_total_train = cbind(dtm_bi_total_train[1:4], apply(dtm_bi_total_train[4],2, norm))
+write.csv(dtm_bi_total_train[,2:4], "bigram_final.csv", row.names=FALSE)
+
+
+
+################################## TO DELETE ######################################
+filter <- getTermFilter("ExactMatchFilter", "CREATED", TRUE)
+terms <- getIndexTerms("VERB", 5, filter)
+synsets <- getSynsets(terms[[1]])
+related <- getRelatedSynsets(synsets[[1]], "!")
+sapply(related, getWord)
+
+###################################################################################
+
+
+
+
+
+
+
+
+
+
+
+
+
+# calculate the bigram probability
+bigramProbability = function(x) {
+  
+  for (i in 1:length(x))
+  {          
+       unigram = strsplit(trim(strsplit(x[i], ":")[[1]][1]), " ")[[1]][1]
+       neighWord = strsplit(trim(strsplit(x[i], ":")[[1]][1]), " ")[[1]][2]
+       num = as.integer(trim(strsplit(x[i], ":")[[1]][2]))
+       deno = max(dtm_uni_total[which(dtm_uni_total$gram == unigram),2])
+       if(length(deno) != 0){
+          x[i] = ((-1)*(log(num/deno)))
+       }else{
+          x[i] = 0
+       } 
+      
+       print(paste(i,":",unigram,":", neighWord,":",num,":",deno,":",x[i]))         
+  } 
+  x
+}
+
+dtm_bi_total_train = cbind(dtm_bi_total_train[2:3], apply(dtm_bi_total_train[4],2, bigramProbability))
+names(dtm_bi_total_train)[1] = "gram1"
+names(dtm_bi_total_train)[2] = "gram2"
+names(dtm_bi_total_train)[3] = "prob"
+write.csv(dtm_bi_total_train, "bigram_prob.csv", row.names=FALSE)
+
+
+```
+
+
+```{r eval=TRUE}
+
+##############################################################################################################################################
+####################################### Prediction ###########################################################################################
+##############################################################################################################################################
+
+pred = function(sentence){  
+  
+  unigrams = rev(strsplit(tolower(sentence), " ")[[1]])
+  for(unigram in unigrams){     
+    b = q[which(q$gram1==unigram),]    
+    if(nrow(b) > 0){   
+#       x = head(b[order(-b$prob, -b$uFreq, -b$bFreq),],1)
+#       print(head(x))
+      return(head(b[order(-b$prob, -b$uFreq, -b$bFreq),],1))
+      #print(b[which.min(b$prob),2])
+      #return((b[which.max(b$prob),]))
+    }
+  }
+}
+
+pred("conditions have been increasing since the mid-1990s and the advent")
+
+
+valid_eng = read.csv("corncob_lowercase.csv", header = TRUE, sep = ",", stringsAsFactors=FALSE)
+g = as.vector(valid_eng$Word)
+gram1 = bigram_prob$gram1
+gram2 = bigram_prob$gram2
+indx1 = match(gram1, g)
+indx2 = match(gram2, g)
+
+c = round(bigram_prob$prob,digits=3)
+K = lapply(c, function(x) ( rev(as.integer(intToBits(x)))))
+
+```
+
+
+```{r eval=FALSE, cache=TRUE}
+
+
+
+
+# calculate the trigram probability
+trigramProbability = function(x) {
+  
+  num = dtm_tri_total[x]
+  colname = names(dtm_tri_total[x])  
+  bigram = paste (trim(strsplit(colname, " ")[[1]][1]),trim(strsplit(colname, " ")[[1]][2]))  
+  deno = dtm_bi_total[which(names(dtm_bi_total) == bigram)]
+  
+  if(length(deno) != 0){
+    return((-1)*(log(num/deno)))
+  }else{
+    
+    trigram = strsplit(colname, " ")
+    w1Total = if(length(dtm_uni_total[which(names(dtm_uni_total) == trigram[[1]][1])]) != 0) dtm_uni_total[which(names(dtm_uni_total) == trigram[[1]][1])] else 0
+    w2Total = if(length(dtm_uni_total[which(names(dtm_uni_total) == trigram[[1]][2])]) != 0) dtm_uni_total[which(names(dtm_uni_total) == trigram[[1]][2])] else 0
+    w3Total = if(length(dtm_uni_total[which(names(dtm_uni_total) == trigram[[1]][3])]) != 0) dtm_uni_total[which(names(dtm_uni_total) == trigram[[1]][3])] else 0
+    
+    w1w2 = paste (trim(strsplit(colname, " ")[[1]][1]),trim(strsplit(colname, " ")[[1]][2]))
+    w1w2Total = if(length(dtm_bi_total[which(names(dtm_bi_total) == w1w2)]) != 0) dtm_bi_total[which(names(dtm_bi_total) == w1w2)] else 0
+    w1w2prob = (-1)*(log(w1w2Total/w1Total))
+    
+    w2w3 = paste (trim(strsplit(colname, " ")[[1]][2]),trim(strsplit(colname, " ")[[1]][3]))
+    w2w3Total = if(length(dtm_bi_total[which(names(dtm_bi_total) == w2w3)]) != 0) dtm_bi_total[which(names(dtm_bi_total) == w2w3)] else 0
+    w2w3prob = (-1)*(log(w2w3Total/w2Total))
+    
+    totalProb = w1w2prob+w2w3prob
+    return(totalProb)
+  } 
+}
+
+
+t = dtm_tri_total
+dtm_tri_prob = sapply(1:length(dtm_tri_total), trigramProbability)
+for(i in 1:length(t)){
+  t[i] = dtm_tri_prob[i]
+}
+dfTrigram = data.frame(grams = names(t), probability = t)
+write.csv(dfTrigram, "trigram_prob.csv")
+
+
+
+# calculate the quadgram probability
+quadgramProbability = function(x) {
+  
+  num = dtm_quad_total[x]
+  colname = names(dtm_quad_total[x])  
+  trigram = paste (trim(strsplit(colname, " ")[[1]][1]),trim(strsplit(colname, " ")[[1]][2]),trim(strsplit(colname, " ")[[1]][3]))  
+  deno = dtm_tri_total[which(names(dtm_tri_total) == trigram)]
+  
+  if(length(deno) != 0){
+    return((-1)*(log(num/deno)))
+  }else{
+    
+    quadgram = strsplit(colname, " ")
+    w1Total = if(length(dtm_uni_total[which(names(dtm_uni_total) == quadgram[[1]][1])]) != 0) dtm_uni_total[which(names(dtm_uni_total) == quadgram[[1]][1])] else 0
+    w2Total = if(length(dtm_uni_total[which(names(dtm_uni_total) == quadgram[[1]][2])]) != 0) dtm_uni_total[which(names(dtm_uni_total) == quadgram[[1]][2])] else 0
+    w3Total = if(length(dtm_uni_total[which(names(dtm_uni_total) == quadgram[[1]][3])]) != 0) dtm_uni_total[which(names(dtm_uni_total) == quadgram[[1]][3])] else 0
+    w4Total = if(length(dtm_uni_total[which(names(dtm_uni_total) == quadgram[[1]][4])]) != 0) dtm_uni_total[which(names(dtm_uni_total) == quadgram[[1]][4])] else 0
+    
+    w1w2 = paste (trim(strsplit(colname, " ")[[1]][1]),trim(strsplit(colname, " ")[[1]][2]))
+    w1w2Total = if(length(dtm_bi_total[which(names(dtm_bi_total) == w1w2)]) != 0) dtm_bi_total[which(names(dtm_bi_total) == w1w2)] else 0
+    w1w2prob = (-1)*(log(w1w2Total/w1Total))
+    
+    w2w3 = paste (trim(strsplit(colname, " ")[[1]][2]),trim(strsplit(colname, " ")[[1]][3]))
+    w2w3Total = if(length(dtm_bi_total[which(names(dtm_bi_total) == w2w3)]) != 0) dtm_bi_total[which(names(dtm_bi_total) == w2w3)] else 0
+    w2w3prob = (-1)*(log(w2w3Total/w2Total))
+    
+    w3w4 = paste (trim(strsplit(colname, " ")[[1]][3]),trim(strsplit(colname, " ")[[1]][4]))
+    w3w4Total = if(length(dtm_bi_total[which(names(dtm_bi_total) == w3w4)]) != 0) dtm_bi_total[which(names(dtm_bi_total) == w3w4)] else 0
+    w3w4prob = (-1)*(log(w3w4Total/w3Total))
+    
+    totalProb = w1w2prob+w2w3prob
+    return(totalProb)
+
+  } 
+}
+
+
+q = dtm_quad_total
+dtm_quad_prob = sapply(1:length(dtm_quad_total), quadgramProbability)
+for(i in 1:length(q)){
+  q[i] = dtm_quad_prob[i]
+}
+dfQuadgram = data.frame(grams = names(q), probability = q)
+write.csv(dfQuadgram, "quadgram_prob.csv")
+```
+
+
+```{r eval=FALSE}
+
+
+
+##############################################################################################################################################
+####################################### Prediction ###########################################################################################
+##############################################################################################################################################
+pred = function(sentence){  
+  
+  trigram = paste(tail(strsplit(sentence, " ")[[1]], 3), collapse=" ")
+  bigram = paste(tail(strsplit(sentence, " ")[[1]], 2), collapse=" ")
+  unigram = paste(tail(strsplit(sentence, " ")[[1]], 1), collapse=" ")
+  
+  q = dfQuadgram[grep(paste("^",trigram,"\\W", sep=""),dfQuadgram$grams, perl=TRUE, value=FALSE),]
+  if(nrow(q) != 0){
+    s = strsplit((as.character(q[which.max(q$probability)][1,])), " ")[[1]]
+    return(tail(s,1))
+  }
+ 
+  t = dfTrigram[grep(paste("^",bigram,"\\W", sep=""),dfTrigram$grams, perl=TRUE, value=FALSE),]
+  if(nrow(t) != 0){
+    s = strsplit((as.character(t[which.max(t$probability)][1,])), " ")[[1]]
+    return(tail(s,1))
+  }
+  
+  b = dfBigram[grep(paste("^",unigram,"\\W", sep=""),dfBigram$grams, perl=TRUE, value=FALSE),]
+  if(nrow(b) != 0){
+    s = strsplit((as.character(b[which.max(b$probability)][1,])), " ")[[1]]
+    return(tail(s,1))
+  }
+}
+
+pred("The guy in front of me just bought a pound of bacon, a bouquet, and a case of")
+
+
+# # For a unigram, return the word with the highest probability
+# a = dfBigram[grep("^today\\W",dfBigram$grams, perl=TRUE, value=FALSE),]
+# a[which.max(a$probability)][1,]
+# 
+# 
+# #SOME NOTES: before going down, think about incorporating the entire data by splitting the corpus to (20, 80). Use 80% for training and 20% for testing.
+# # For a diagram, return the word with the highest probability
+# b = dfTrigram[grep("^train\\W",dfTrigram$grams, perl=TRUE, value=FALSE),]
+# b[which.max(b$probability)][1,]  ### to do, if nothing is returned, will have to go through the bigram to find// To find the prediction of the next words, find the word with the maximum sum of log of probability (start with 5 gram, if nothing, then 4-gram, then 3-gram, then 2-gram).
+# 
+# # For a diagram, return the word with the highest probability
+# c = dfQuadgram[grep("^train\\W",dfQuadgram$grams, perl=TRUE, value=FALSE),]
+# c[which.max(c$probability)][1,] ### to do, if nothing is returned, will have to go through the trigram, bigram to find// To find the prediction of the next words, find the word with the maximum sum of log of probability (start with 5 gram, if nothing, then 4-gram, then 3-gram, then 2-gram).
+# 
+# # then write a function programmactically choose a, b, or c given a word/sentence
+# # then learn to incorporate decision tree
+
+
+```
+
