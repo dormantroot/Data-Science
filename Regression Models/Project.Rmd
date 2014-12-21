@@ -1,0 +1,140 @@
+---
+title: "Factors That Affect Car Mileage"
+output: html_document
+---
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(plyr)
+library(ggplot2)
+library(gridExtra)
+library(caret)
+library(GGally)
+data(mtcars)
+library(plyr)
+set.seed(3433)
+```
+
+### Executive Summary
+With the ever increase in gas prices, it has become quite evident that understanding the real factors that impact mileage (efficiency) of a car is important for the success and growth of any car manufactures. We at Motor Trend has an obligation to enlighten these manufacturers so at to produce better cars, there by helping the consumers. For this, I utilized the 'mtcars' dataset which reflect the real world scenarios of cars with different specifications. 
+
+My analysis/study, which is described in detail below, has revealed that the kind of tranmission (Automatic or Manual) play an intergral part in setting the mileage of a car. However, other factors like 'NumOfCyclinders', 'Weight', 'HorsePower' etc also affect the mileage. From <a href="#Figure1">Figure 1</a> below and <a href="#ModelA">summary statistics</a> learned from my model, it is quite evident that weight of car in conjunction with it's tranmission type has the greatest impact on mileage. Another interesting fact learned from the model is that, the magnitude of the negative correlation between mileage and other factors ('NumOfCyclinders', 'Weight', 'HorsePower' etc) is greater for manual tranmission. Clearly the outcomes for <a href="#ModelA">Model A</a> and <a href="#ModelB">Model B</a> indicates that we cannot solely dictate that tranmission is the main factor that affects mileage. 
+
+<b>Questions</b>
+Is an automatic or manual transmission better for MPG?: - 
+Holding all other factors constant in our model, it is quite evident that manual tranmission cars yield better mileage than automatic cars.
+
+Quantify the MPG difference between automatic and manual transmissions: - 
+From my analysis, manaual tranmission have better mileage b/c their average weight, horsepower, num of cyclinder etc are generally smaller than automatic cars.
+
+### Modeling and Analysis
+```{r eval=TRUE,  echo=FALSE, results='hide'}
+
+# mtcars
+df = mtcars
+df = rename(mtcars, c("mpg"="MilePerGallon", "cyl"="NumOfCyclinders", "disp"="Displacement", "hp"="HorsePower", "drat"="RearAxleRatio", "wt"="Weight","am"="Transmission","qsec"="qsec","vs"="V/S", "gear"="NumOfFowardGears","carb"="NumOfCarburetors"))
+df$Transmission = as.factor(df$Transmission)
+df$Transmission = revalue(df$Transmission, c("0"="Automatic", "1"="Manual"))
+
+inTrain = createDataPartition(y=df$Transmission, p=0.75, list=FALSE)
+dfT = df[inTrain,]
+dfV = df[-inTrain,]
+```
+
+Here's a visual cue on how the different variables affect the mileage. 
+<b><a name="Figure1">Figure 1</a></b>
+```{r eval=TRUE,  echo=FALSE}
+ggpairs(data=dfT, # data.frame with variables
+        columns=c("MilePerGallon","Transmission","NumOfCyclinders","HorsePower","Weight"), # columns to plot, default to all.
+        title="Correlation of Different Factors that Affect Mileage", # title of the plot
+        colour = "Transmission")
+```
+
+Clearly, manual tranmission cars have more mileage than automatic tranmission. In fact, the mileage for automatic tranmission range from ~10 miles to 23 miles, while manual transmission ranges from ~ 17 miles to 35 miles.More over, other factors like number of cyclinders, horsepower, weight etc also have a negative impact on Mileages. Interestingly, this negative impact is higher for manual tranmission than automatic transmission. <a href="#Figure3">Figure 3</a> below gives you a prespective of the relationship between Mileage and other factores.
+
+
+For our analysis, let's create two models:
+<ol>
+<li>Model A - consider all of these covariates: "MilePerGallon", "NumOfCyclinders", "Displacement", "HorsePower","RearAxleRatio", "Weight","qsec","V/S", "NumOfFowardGears","NumOfCarburetors"</li>
+<li>Model B - consider these four covariates: "MilePerGallon", "NumOfCyclinders", "HorsePower","Weight"</li>
+</ol>
+
+
+```{r eval=TRUE,  echo=FALSE, results='hide'}
+## PCA Processing
+cols = c("MilePerGallon", "NumOfCyclinders", "Displacement", "HorsePower","RearAxleRatio", "Weight","qsec","V/S", "NumOfFowardGears","NumOfCarburetors")
+preProc = preProcess(dfT[,cols], method="pca", thresh=0.80)
+trainPC = predict(preProc, dfT[,cols])
+```
+
+<b><a name="ModelA">Model A Results</a></b>
+```{r eval=TRUE,  echo=FALSE, results='hide'}
+## Training the model with all variables
+dfT$Transmission = as.numeric(dfT[,"Transmission"])
+model = lm(Transmission ~ ., data = dfT)
+```
+
+Residual Plot and Summary
+```{r eval=TRUE}
+# Residual plot
+plot(resid(model))
+abline(h=0)
+
+# Model Summary
+summary(model)
+
+# The totoal residual error
+deviance(model)
+```
+The Residuals section provides summary statistics for the errors in our predictions. The maximum error of 1.131 suggest that the model under-predicted MilePerGallon by nearly 1 points for at least one observation. 
+
+For the coefficients, the column labeled Estimate contains the estimated regression coefficients as calculated by ordinary least squares.Theoretically, if a variable's coefficient is zero then the variable is worthless; it adds
+nothing to the model. In our case, the estimate for 'MilePerGallon' is 0.028 and hence it does add some value to the model. Concretly speaking, we estimate the mileage to increase if the transmission is switched to manual. 
+
+R2 is a measure of the model's quality. Bigger is better. Mathematically, it is the fraction of the variance of y that is explained by the regression model. The remaining variance is not explained by the model, so it must be due to other factors. In our case, the model explains 0.812 (81.2%) of the variance of model, which is surprisingly good.
+
+
+<b><a name="ModelB">Model B Results</a></b>
+```{r eval=TRUE,  echo=FALSE, results='hide'}
+## Training the model with just "MilePerGallon", "NumOfCyclinders", "HorsePower","Weight"
+model = lm(Transmission ~ MilePerGallon+NumOfCyclinders+HorsePower+Weight, data = dfT)
+
+```
+
+Residual Plot and Summary
+```{r}
+# Residual plot
+plot(resid(model))
+abline(h=0)
+
+# Model Summary
+summary(model)
+
+# The totoal residual error
+deviance(model) # residual sum of squares
+```
+
+In model B, the sum of residual is pretty high 2.475. Also, R2 is 0.587, which means that this model only explains 59% of the variance. This in fact explains that all of the factors has to be consider to precisely understand why mileage varies. 
+
+
+### Appendix
+#### <a name="Figure2">Figure 2</a>
+```{r}
+#~~~~~ frequency
+ggplot(dfT, aes(x=Transmission)) + geom_histogram(aes(y=..density..),binwidth=.2, colour="black", fill="white") + 
+  ggtitle("Transmission Frequency in Training Set") +  
+  geom_density(alpha=.2, fill="#FF6666")
+```
+
+#### <a name="Figure3">Figure 3</a>
+```{r}
+#~~~ boxplot
+b1 = ggplot(dfT, aes(x=Transmission, y=MilePerGallon)) + geom_line() + geom_point() 
+b2 = ggplot(dfT, aes(x=HorsePower, y=MilePerGallon)) + geom_line() + geom_point() 
+b3 = ggplot(dfT, aes(x=NumOfCyclinders, y=MilePerGallon)) + geom_line() + geom_point() 
+b4 = ggplot(dfT, aes(x=Weight, y=MilePerGallon)) + geom_line() + geom_point() 
+
+grid.arrange(b1, b2, b3, b4, main = "Mileage Perspective") # notice the outliers; hoping PCA processing should smooth that out.
+
+```
+
