@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<!-- saved from url=(0014)about:internet -->
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta http-equiv="x-ua-compatible" content="IE=9" >
+
+<title>Peer Assessment 2 - Exploratory Data Analysis</title>
+
+<style type="text/css">
+body, td {
+   font-family: sans-serif;
+   background-color: white;
+   font-size: 12px;
+   margin: 8px;
+}
+
+tt, code, pre {
+   font-family: 'DejaVu Sans Mono', 'Droid Sans Mono', 'Lucida Console', Consolas, Monaco, monospace;
+}
+
+h1 { 
+   font-size:2.2em; 
+}
+
+h2 { 
+   font-size:1.8em; 
+}
+
+h3 { 
+   font-size:1.4em; 
+}
+
+h4 { 
+   font-size:1.0em; 
+}
+
+h5 { 
+   font-size:0.9em; 
+}
+
+h6 { 
+   font-size:0.8em; 
+}
+
+a:visited {
+   color: rgb(50%, 0%, 50%);
+}
+
+pre {	
+   margin-top: 0;
+   max-width: 95%;
+   border: 1px solid #ccc;
+   white-space: pre-wrap;
+}
+
+pre code {
+   display: block; padding: 0.5em;
+}
+
+code.r, code.cpp {
+   background-color: #F8F8F8;
+}
+
+table, td, th {
+  border: none;
+}
+
+blockquote {
+   color:#666666;
+   margin:0;
+   padding-left: 1em;
+   border-left: 0.5em #EEE solid;
+}
+
+hr {
+   height: 0px;
+   border-bottom: none;
+   border-top-width: thin;
+   border-top-style: dotted;
+   border-top-color: #999999;
+}
+
+@media print {
+   * { 
+      background: transparent !important; 
+      color: black !important; 
+      filter:none !important; 
+      -ms-filter: none !important; 
+   }
+
+   body { 
+      font-size:12pt; 
+      max-width:100%; 
+   }
+       
+   a, a:visited { 
+      text-decoration: underline; 
+   }
+
+   hr { 
+      visibility: hidden;
+      page-break-before: always;
+   }
+
+   pre, blockquote { 
+      padding-right: 1em; 
+      page-break-inside: avoid; 
+   }
+
+   tr, img { 
+      page-break-inside: avoid; 
+   }
+
+   img { 
+      max-width: 100% !important; 
+   }
+
+   @page :left { 
+      margin: 15mm 20mm 15mm 10mm; 
+   }
+     
+   @page :right { 
+      margin: 15mm 10mm 15mm 20mm; 
+   }
+
+   p, h2, h3 { 
+      orphans: 3; widows: 3; 
+   }
+
+   h2, h3 { 
+      page-break-after: avoid; 
+   }
+}
+
+</style>
+
+<!-- Styles for R syntax highlighter -->
+<style type="text/css">
+   pre .operator,
+   pre .paren {
+     color: rgb(104, 118, 135)
+   }
+
+   pre .literal {
+     color: rgb(88, 72, 246)
+   }
+
+   pre .number {
+     color: rgb(0, 0, 205);
+   }
+
+   pre .comment {
+     color: rgb(76, 136, 107);
+   }
+
+   pre .keyword {
+     color: rgb(0, 0, 255);
+   }
+
+   pre .identifier {
+     color: rgb(0, 0, 0);
+   }
+
+   pre .string {
+     color: rgb(3, 106, 7);
+   }
+</style>
+
+<!-- R syntax highlighter -->
+<script type="text/javascript">
+var hljs=new function(){function m(p){return p.replace(/&/gm,"&amp;").replace(/</gm,"&lt;")}function f(r,q,p){return RegExp(q,"m"+(r.cI?"i":"")+(p?"g":""))}function b(r){for(var p=0;p<r.childNodes.length;p++){var q=r.childNodes[p];if(q.nodeName=="CODE"){return q}if(!(q.nodeType==3&&q.nodeValue.match(/\s+/))){break}}}function h(t,s){var p="";for(var r=0;r<t.childNodes.length;r++){if(t.childNodes[r].nodeType==3){var q=t.childNodes[r].nodeValue;if(s){q=q.replace(/\n/g,"")}p+=q}else{if(t.childNodes[r].nodeName=="BR"){p+="\n"}else{p+=h(t.childNodes[r])}}}if(/MSIE [678]/.test(navigator.userAgent)){p=p.replace(/\r/g,"\n")}return p}function a(s){var r=s.className.split(/\s+/);r=r.concat(s.parentNode.className.split(/\s+/));for(var q=0;q<r.length;q++){var p=r[q].replace(/^language-/,"");if(e[p]){return p}}}function c(q){var p=[];(function(s,t){for(var r=0;r<s.childNodes.length;r++){if(s.childNodes[r].nodeType==3){t+=s.childNodes[r].nodeValue.length}else{if(s.childNodes[r].nodeName=="BR"){t+=1}else{if(s.childNodes[r].nodeType==1){p.push({event:"start",offset:t,node:s.childNodes[r]});t=arguments.callee(s.childNodes[r],t);p.push({event:"stop",offset:t,node:s.childNodes[r]})}}}}return t})(q,0);return p}function k(y,w,x){var q=0;var z="";var s=[];function u(){if(y.length&&w.length){if(y[0].offset!=w[0].offset){return(y[0].offset<w[0].offset)?y:w}else{return w[0].event=="start"?y:w}}else{return y.length?y:w}}function t(D){var A="<"+D.nodeName.toLowerCase();for(var B=0;B<D.attributes.length;B++){var C=D.attributes[B];A+=" "+C.nodeName.toLowerCase();if(C.value!==undefined&&C.value!==false&&C.value!==null){A+='="'+m(C.value)+'"'}}return A+">"}while(y.length||w.length){var v=u().splice(0,1)[0];z+=m(x.substr(q,v.offset-q));q=v.offset;if(v.event=="start"){z+=t(v.node);s.push(v.node)}else{if(v.event=="stop"){var p,r=s.length;do{r--;p=s[r];z+=("</"+p.nodeName.toLowerCase()+">")}while(p!=v.node);s.splice(r,1);while(r<s.length){z+=t(s[r]);r++}}}}return z+m(x.substr(q))}function j(){function q(x,y,v){if(x.compiled){return}var u;var s=[];if(x.k){x.lR=f(y,x.l||hljs.IR,true);for(var w in x.k){if(!x.k.hasOwnProperty(w)){continue}if(x.k[w] instanceof Object){u=x.k[w]}else{u=x.k;w="keyword"}for(var r in u){if(!u.hasOwnProperty(r)){continue}x.k[r]=[w,u[r]];s.push(r)}}}if(!v){if(x.bWK){x.b="\\b("+s.join("|")+")\\s"}x.bR=f(y,x.b?x.b:"\\B|\\b");if(!x.e&&!x.eW){x.e="\\B|\\b"}if(x.e){x.eR=f(y,x.e)}}if(x.i){x.iR=f(y,x.i)}if(x.r===undefined){x.r=1}if(!x.c){x.c=[]}x.compiled=true;for(var t=0;t<x.c.length;t++){if(x.c[t]=="self"){x.c[t]=x}q(x.c[t],y,false)}if(x.starts){q(x.starts,y,false)}}for(var p in e){if(!e.hasOwnProperty(p)){continue}q(e[p].dM,e[p],true)}}function d(B,C){if(!j.called){j();j.called=true}function q(r,M){for(var L=0;L<M.c.length;L++){if((M.c[L].bR.exec(r)||[null])[0]==r){return M.c[L]}}}function v(L,r){if(D[L].e&&D[L].eR.test(r)){return 1}if(D[L].eW){var M=v(L-1,r);return M?M+1:0}return 0}function w(r,L){return L.i&&L.iR.test(r)}function K(N,O){var M=[];for(var L=0;L<N.c.length;L++){M.push(N.c[L].b)}var r=D.length-1;do{if(D[r].e){M.push(D[r].e)}r--}while(D[r+1].eW);if(N.i){M.push(N.i)}return f(O,M.join("|"),true)}function p(M,L){var N=D[D.length-1];if(!N.t){N.t=K(N,E)}N.t.lastIndex=L;var r=N.t.exec(M);return r?[M.substr(L,r.index-L),r[0],false]:[M.substr(L),"",true]}function z(N,r){var L=E.cI?r[0].toLowerCase():r[0];var M=N.k[L];if(M&&M instanceof Array){return M}return false}function F(L,P){L=m(L);if(!P.k){return L}var r="";var O=0;P.lR.lastIndex=0;var M=P.lR.exec(L);while(M){r+=L.substr(O,M.index-O);var N=z(P,M);if(N){x+=N[1];r+='<span class="'+N[0]+'">'+M[0]+"</span>"}else{r+=M[0]}O=P.lR.lastIndex;M=P.lR.exec(L)}return r+L.substr(O,L.length-O)}function J(L,M){if(M.sL&&e[M.sL]){var r=d(M.sL,L);x+=r.keyword_count;return r.value}else{return F(L,M)}}function I(M,r){var L=M.cN?'<span class="'+M.cN+'">':"";if(M.rB){y+=L;M.buffer=""}else{if(M.eB){y+=m(r)+L;M.buffer=""}else{y+=L;M.buffer=r}}D.push(M);A+=M.r}function G(N,M,Q){var R=D[D.length-1];if(Q){y+=J(R.buffer+N,R);return false}var P=q(M,R);if(P){y+=J(R.buffer+N,R);I(P,M);return P.rB}var L=v(D.length-1,M);if(L){var O=R.cN?"</span>":"";if(R.rE){y+=J(R.buffer+N,R)+O}else{if(R.eE){y+=J(R.buffer+N,R)+O+m(M)}else{y+=J(R.buffer+N+M,R)+O}}while(L>1){O=D[D.length-2].cN?"</span>":"";y+=O;L--;D.length--}var r=D[D.length-1];D.length--;D[D.length-1].buffer="";if(r.starts){I(r.starts,"")}return R.rE}if(w(M,R)){throw"Illegal"}}var E=e[B];var D=[E.dM];var A=0;var x=0;var y="";try{var s,u=0;E.dM.buffer="";do{s=p(C,u);var t=G(s[0],s[1],s[2]);u+=s[0].length;if(!t){u+=s[1].length}}while(!s[2]);if(D.length>1){throw"Illegal"}return{r:A,keyword_count:x,value:y}}catch(H){if(H=="Illegal"){return{r:0,keyword_count:0,value:m(C)}}else{throw H}}}function g(t){var p={keyword_count:0,r:0,value:m(t)};var r=p;for(var q in e){if(!e.hasOwnProperty(q)){continue}var s=d(q,t);s.language=q;if(s.keyword_count+s.r>r.keyword_count+r.r){r=s}if(s.keyword_count+s.r>p.keyword_count+p.r){r=p;p=s}}if(r.language){p.second_best=r}return p}function i(r,q,p){if(q){r=r.replace(/^((<[^>]+>|\t)+)/gm,function(t,w,v,u){return w.replace(/\t/g,q)})}if(p){r=r.replace(/\n/g,"<br>")}return r}function n(t,w,r){var x=h(t,r);var v=a(t);var y,s;if(v){y=d(v,x)}else{return}var q=c(t);if(q.length){s=document.createElement("pre");s.innerHTML=y.value;y.value=k(q,c(s),x)}y.value=i(y.value,w,r);var u=t.className;if(!u.match("(\\s|^)(language-)?"+v+"(\\s|$)")){u=u?(u+" "+v):v}if(/MSIE [678]/.test(navigator.userAgent)&&t.tagName=="CODE"&&t.parentNode.tagName=="PRE"){s=t.parentNode;var p=document.createElement("div");p.innerHTML="<pre><code>"+y.value+"</code></pre>";t=p.firstChild.firstChild;p.firstChild.cN=s.cN;s.parentNode.replaceChild(p.firstChild,s)}else{t.innerHTML=y.value}t.className=u;t.result={language:v,kw:y.keyword_count,re:y.r};if(y.second_best){t.second_best={language:y.second_best.language,kw:y.second_best.keyword_count,re:y.second_best.r}}}function o(){if(o.called){return}o.called=true;var r=document.getElementsByTagName("pre");for(var p=0;p<r.length;p++){var q=b(r[p]);if(q){n(q,hljs.tabReplace)}}}function l(){if(window.addEventListener){window.addEventListener("DOMContentLoaded",o,false);window.addEventListener("load",o,false)}else{if(window.attachEvent){window.attachEvent("onload",o)}else{window.onload=o}}}var e={};this.LANGUAGES=e;this.highlight=d;this.highlightAuto=g;this.fixMarkup=i;this.highlightBlock=n;this.initHighlighting=o;this.initHighlightingOnLoad=l;this.IR="[a-zA-Z][a-zA-Z0-9_]*";this.UIR="[a-zA-Z_][a-zA-Z0-9_]*";this.NR="\\b\\d+(\\.\\d+)?";this.CNR="\\b(0[xX][a-fA-F0-9]+|(\\d+(\\.\\d*)?|\\.\\d+)([eE][-+]?\\d+)?)";this.BNR="\\b(0b[01]+)";this.RSR="!|!=|!==|%|%=|&|&&|&=|\\*|\\*=|\\+|\\+=|,|\\.|-|-=|/|/=|:|;|<|<<|<<=|<=|=|==|===|>|>=|>>|>>=|>>>|>>>=|\\?|\\[|\\{|\\(|\\^|\\^=|\\||\\|=|\\|\\||~";this.ER="(?![\\s\\S])";this.BE={b:"\\\\.",r:0};this.ASM={cN:"string",b:"'",e:"'",i:"\\n",c:[this.BE],r:0};this.QSM={cN:"string",b:'"',e:'"',i:"\\n",c:[this.BE],r:0};this.CLCM={cN:"comment",b:"//",e:"$"};this.CBLCLM={cN:"comment",b:"/\\*",e:"\\*/"};this.HCM={cN:"comment",b:"#",e:"$"};this.NM={cN:"number",b:this.NR,r:0};this.CNM={cN:"number",b:this.CNR,r:0};this.BNM={cN:"number",b:this.BNR,r:0};this.inherit=function(r,s){var p={};for(var q in r){p[q]=r[q]}if(s){for(var q in s){p[q]=s[q]}}return p}}();hljs.LANGUAGES.cpp=function(){var a={keyword:{"false":1,"int":1,"float":1,"while":1,"private":1,"char":1,"catch":1,"export":1,virtual:1,operator:2,sizeof:2,dynamic_cast:2,typedef:2,const_cast:2,"const":1,struct:1,"for":1,static_cast:2,union:1,namespace:1,unsigned:1,"long":1,"throw":1,"volatile":2,"static":1,"protected":1,bool:1,template:1,mutable:1,"if":1,"public":1,friend:2,"do":1,"return":1,"goto":1,auto:1,"void":2,"enum":1,"else":1,"break":1,"new":1,extern:1,using:1,"true":1,"class":1,asm:1,"case":1,typeid:1,"short":1,reinterpret_cast:2,"default":1,"double":1,register:1,explicit:1,signed:1,typename:1,"try":1,"this":1,"switch":1,"continue":1,wchar_t:1,inline:1,"delete":1,alignof:1,char16_t:1,char32_t:1,constexpr:1,decltype:1,noexcept:1,nullptr:1,static_assert:1,thread_local:1,restrict:1,_Bool:1,complex:1},built_in:{std:1,string:1,cin:1,cout:1,cerr:1,clog:1,stringstream:1,istringstream:1,ostringstream:1,auto_ptr:1,deque:1,list:1,queue:1,stack:1,vector:1,map:1,set:1,bitset:1,multiset:1,multimap:1,unordered_set:1,unordered_map:1,unordered_multiset:1,unordered_multimap:1,array:1,shared_ptr:1}};return{dM:{k:a,i:"</",c:[hljs.CLCM,hljs.CBLCLM,hljs.QSM,{cN:"string",b:"'\\\\?.",e:"'",i:"."},{cN:"number",b:"\\b(\\d+(\\.\\d*)?|\\.\\d+)(u|U|l|L|ul|UL|f|F)"},hljs.CNM,{cN:"preprocessor",b:"#",e:"$"},{cN:"stl_container",b:"\\b(deque|list|queue|stack|vector|map|set|bitset|multiset|multimap|unordered_map|unordered_set|unordered_multiset|unordered_multimap|array)\\s*<",e:">",k:a,r:10,c:["self"]}]}}}();hljs.LANGUAGES.r={dM:{c:[hljs.HCM,{cN:"number",b:"\\b0[xX][0-9a-fA-F]+[Li]?\\b",e:hljs.IMMEDIATE_RE,r:0},{cN:"number",b:"\\b\\d+(?:[eE][+\\-]?\\d*)?L\\b",e:hljs.IMMEDIATE_RE,r:0},{cN:"number",b:"\\b\\d+\\.(?!\\d)(?:i\\b)?",e:hljs.IMMEDIATE_RE,r:1},{cN:"number",b:"\\b\\d+(?:\\.\\d*)?(?:[eE][+\\-]?\\d*)?i?\\b",e:hljs.IMMEDIATE_RE,r:0},{cN:"number",b:"\\.\\d+(?:[eE][+\\-]?\\d*)?i?\\b",e:hljs.IMMEDIATE_RE,r:1},{cN:"keyword",b:"(?:tryCatch|library|setGeneric|setGroupGeneric)\\b",e:hljs.IMMEDIATE_RE,r:10},{cN:"keyword",b:"\\.\\.\\.",e:hljs.IMMEDIATE_RE,r:10},{cN:"keyword",b:"\\.\\.\\d+(?![\\w.])",e:hljs.IMMEDIATE_RE,r:10},{cN:"keyword",b:"\\b(?:function)",e:hljs.IMMEDIATE_RE,r:2},{cN:"keyword",b:"(?:if|in|break|next|repeat|else|for|return|switch|while|try|stop|warning|require|attach|detach|source|setMethod|setClass)\\b",e:hljs.IMMEDIATE_RE,r:1},{cN:"literal",b:"(?:NA|NA_integer_|NA_real_|NA_character_|NA_complex_)\\b",e:hljs.IMMEDIATE_RE,r:10},{cN:"literal",b:"(?:NULL|TRUE|FALSE|T|F|Inf|NaN)\\b",e:hljs.IMMEDIATE_RE,r:1},{cN:"identifier",b:"[a-zA-Z.][a-zA-Z0-9._]*\\b",e:hljs.IMMEDIATE_RE,r:0},{cN:"operator",b:"<\\-(?!\\s*\\d)",e:hljs.IMMEDIATE_RE,r:2},{cN:"operator",b:"\\->|<\\-",e:hljs.IMMEDIATE_RE,r:1},{cN:"operator",b:"%%|~",e:hljs.IMMEDIATE_RE},{cN:"operator",b:">=|<=|==|!=|\\|\\||&&|=|\\+|\\-|\\*|/|\\^|>|<|!|&|\\||\\$|:",e:hljs.IMMEDIATE_RE,r:0},{cN:"operator",b:"%",e:"%",i:"\\n",r:1},{cN:"identifier",b:"`",e:"`",r:0},{cN:"string",b:'"',e:'"',c:[hljs.BE],r:0},{cN:"string",b:"'",e:"'",c:[hljs.BE],r:0},{cN:"paren",b:"[[({\\])}]",e:hljs.IMMEDIATE_RE,r:0}]}};
+hljs.initHighlightingOnLoad();
+</script>
+
+
+
+
+</head>
+
+<body>
+<h1>Peer Assessment 2 - Exploratory Data Analysis</h1>
+
+<p>
+Code for peer assessment 2 - Exploratory Data Analysis
+</p>
+
+<h2>Data Processing and Exploration</h2>
+
+<pre><code class="r"># Read the rd file contents
+setwd(&quot;F:/My Development/My Testing Ground/Data Science/Data Science Cert - Code/Exploratory Data Analysis/Week 3&quot;)
+NEI = readRDS(&quot;summarySCC_PM25.rds&quot;)
+SCC = readRDS(&quot;Source_Classification_Code.rds&quot;)
+</code></pre>
+
+<pre><code class="r"># summary of NEI
+str(NEI)
+</code></pre>
+
+<pre><code>## &#39;data.frame&#39;:    6497651 obs. of  6 variables:
+##  $ fips     : chr  &quot;09001&quot; &quot;09001&quot; &quot;09001&quot; &quot;09001&quot; ...
+##  $ SCC      : chr  &quot;10100401&quot; &quot;10100404&quot; &quot;10100501&quot; &quot;10200401&quot; ...
+##  $ Pollutant: chr  &quot;PM25-PRI&quot; &quot;PM25-PRI&quot; &quot;PM25-PRI&quot; &quot;PM25-PRI&quot; ...
+##  $ Emissions: num  15.714 234.178 0.128 2.036 0.388 ...
+##  $ type     : chr  &quot;POINT&quot; &quot;POINT&quot; &quot;POINT&quot; &quot;POINT&quot; ...
+##  $ year     : int  1999 1999 1999 1999 1999 1999 1999 1999 1999 1999 ...
+</code></pre>
+
+<pre><code class="r">
+# summary of SCC
+str(SCC)
+</code></pre>
+
+<pre><code>## &#39;data.frame&#39;:    11717 obs. of  15 variables:
+##  $ SCC                : Factor w/ 11717 levels &quot;10100101&quot;,&quot;10100102&quot;,..: 1 2 3 4 5 6 7 8 9 10 ...
+##  $ Data.Category      : Factor w/ 6 levels &quot;Biogenic&quot;,&quot;Event&quot;,..: 6 6 6 6 6 6 6 6 6 6 ...
+##  $ Short.Name         : Factor w/ 11238 levels &quot;&quot;,&quot;2,4-D Salts and Esters Prod /Process Vents, 2,4-D Recovery: Filtration&quot;,..: 3283 3284 3293 3291 3290 3294 3295 3296 3292 3289 ...
+##  $ EI.Sector          : Factor w/ 59 levels &quot;Agriculture - Crops &amp; Livestock Dust&quot;,..: 18 18 18 18 18 18 18 18 18 18 ...
+##  $ Option.Group       : Factor w/ 25 levels &quot;&quot;,&quot;C/I Kerosene&quot;,..: 1 1 1 1 1 1 1 1 1 1 ...
+##  $ Option.Set         : Factor w/ 18 levels &quot;&quot;,&quot;A&quot;,&quot;B&quot;,&quot;B1A&quot;,..: 1 1 1 1 1 1 1 1 1 1 ...
+##  $ SCC.Level.One      : Factor w/ 17 levels &quot;Brick Kilns&quot;,..: 3 3 3 3 3 3 3 3 3 3 ...
+##  $ SCC.Level.Two      : Factor w/ 146 levels &quot;&quot;,&quot;Agricultural Chemicals Production&quot;,..: 32 32 32 32 32 32 32 32 32 32 ...
+##  $ SCC.Level.Three    : Factor w/ 1061 levels &quot;&quot;,&quot;100% Biosolids (e.g., sewage sludge, manure, mixtures of these matls)&quot;,..: 88 88 156 156 156 156 156 156 156 156 ...
+##  $ SCC.Level.Four     : Factor w/ 6084 levels &quot;&quot;,&quot;(NH4)2 SO4 Acid Bath System and Evaporator&quot;,..: 4455 5583 4466 4458 1341 5246 5584 5983 4461 776 ...
+##  $ Map.To             : num  NA NA NA NA NA NA NA NA NA NA ...
+##  $ Last.Inventory.Year: int  NA NA NA NA NA NA NA NA NA NA ...
+##  $ Created_Date       : Factor w/ 57 levels &quot;&quot;,&quot;1/27/2000 0:00:00&quot;,..: 1 1 1 1 1 1 1 1 1 1 ...
+##  $ Revised_Date       : Factor w/ 44 levels &quot;&quot;,&quot;1/27/2000 0:00:00&quot;,..: 1 1 1 1 1 1 1 1 1 1 ...
+##  $ Usage.Notes        : Factor w/ 21 levels &quot;&quot;,&quot; &quot;,&quot;includes bleaching towers, washer hoods, filtrate tanks, vacuum pump exhausts&quot;,..: 1 1 1 1 1 1 1 1 1 1 ...
+</code></pre>
+
+<pre><code class="r">
+# top 10 entries in NEI
+head(NEI, 10)
+</code></pre>
+
+<pre><code>##     fips      SCC Pollutant Emissions  type year
+## 4  09001 10100401  PM25-PRI    15.714 POINT 1999
+## 8  09001 10100404  PM25-PRI   234.178 POINT 1999
+## 12 09001 10100501  PM25-PRI     0.128 POINT 1999
+## 16 09001 10200401  PM25-PRI     2.036 POINT 1999
+## 20 09001 10200504  PM25-PRI     0.388 POINT 1999
+## 24 09001 10200602  PM25-PRI     1.490 POINT 1999
+## 28 09001 10200603  PM25-PRI     0.200 POINT 1999
+## 32 09001 10300401  PM25-PRI     0.081 POINT 1999
+## 36 09001 10300501  PM25-PRI     0.184 POINT 1999
+## 40 09001 10300504  PM25-PRI     0.273 POINT 1999
+</code></pre>
+
+<pre><code class="r">
+# top 10 entries in SCC
+head(SCC, 10)
+</code></pre>
+
+<pre><code>##         SCC Data.Category
+## 1  10100101         Point
+## 2  10100102         Point
+## 3  10100201         Point
+## 4  10100202         Point
+## 5  10100203         Point
+## 6  10100204         Point
+## 7  10100205         Point
+## 8  10100211         Point
+## 9  10100212         Point
+## 10 10100215         Point
+##                                                                           Short.Name
+## 1                           Ext Comb /Electric Gen /Anthracite Coal /Pulverized Coal
+## 2         Ext Comb /Electric Gen /Anthracite Coal /Traveling Grate (Overfeed) Stoker
+## 3               Ext Comb /Electric Gen /Bituminous Coal /Pulverized Coal: Wet Bottom
+## 4               Ext Comb /Electric Gen /Bituminous Coal /Pulverized Coal: Dry Bottom
+## 5                           Ext Comb /Electric Gen /Bituminous Coal /Cyclone Furnace
+## 6                           Ext Comb /Electric Gen /Bituminous Coal /Spreader Stoker
+## 7         Ext Comb /Electric Gen /Bituminous Coal /Traveling Grate (Overfeed) Stoker
+## 8                   Ext Comb /Electric Gen /Bituminous Coal /Wet Bottom (Tangential)
+## 9  Ext Comb /Electric Gen /Bituminous Coal /Pulverized Coal: Dry Bottom (Tangential)
+## 10                              Ext Comb /Electric Gen /Bituminous Coal /Cell Burner
+##                                 EI.Sector Option.Group Option.Set
+## 1  Fuel Comb - Electric Generation - Coal                        
+## 2  Fuel Comb - Electric Generation - Coal                        
+## 3  Fuel Comb - Electric Generation - Coal                        
+## 4  Fuel Comb - Electric Generation - Coal                        
+## 5  Fuel Comb - Electric Generation - Coal                        
+## 6  Fuel Comb - Electric Generation - Coal                        
+## 7  Fuel Comb - Electric Generation - Coal                        
+## 8  Fuel Comb - Electric Generation - Coal                        
+## 9  Fuel Comb - Electric Generation - Coal                        
+## 10 Fuel Comb - Electric Generation - Coal                        
+##                  SCC.Level.One       SCC.Level.Two
+## 1  External Combustion Boilers Electric Generation
+## 2  External Combustion Boilers Electric Generation
+## 3  External Combustion Boilers Electric Generation
+## 4  External Combustion Boilers Electric Generation
+## 5  External Combustion Boilers Electric Generation
+## 6  External Combustion Boilers Electric Generation
+## 7  External Combustion Boilers Electric Generation
+## 8  External Combustion Boilers Electric Generation
+## 9  External Combustion Boilers Electric Generation
+## 10 External Combustion Boilers Electric Generation
+##                  SCC.Level.Three
+## 1                Anthracite Coal
+## 2                Anthracite Coal
+## 3  Bituminous/Subbituminous Coal
+## 4  Bituminous/Subbituminous Coal
+## 5  Bituminous/Subbituminous Coal
+## 6  Bituminous/Subbituminous Coal
+## 7  Bituminous/Subbituminous Coal
+## 8  Bituminous/Subbituminous Coal
+## 9  Bituminous/Subbituminous Coal
+## 10 Bituminous/Subbituminous Coal
+##                                                SCC.Level.Four Map.To
+## 1                                             Pulverized Coal     NA
+## 2                           Traveling Grate (Overfeed) Stoker     NA
+## 3               Pulverized Coal: Wet Bottom (Bituminous Coal)     NA
+## 4               Pulverized Coal: Dry Bottom (Bituminous Coal)     NA
+## 5                           Cyclone Furnace (Bituminous Coal)     NA
+## 6                           Spreader Stoker (Bituminous Coal)     NA
+## 7         Traveling Grate (Overfeed) Stoker (Bituminous Coal)     NA
+## 8                   Wet Bottom (Tangential) (Bituminous Coal)     NA
+## 9  Pulverized Coal: Dry Bottom (Tangential) (Bituminous Coal)     NA
+## 10                              Cell Burner (Bituminous Coal)     NA
+##    Last.Inventory.Year Created_Date Revised_Date Usage.Notes
+## 1                   NA                                      
+## 2                   NA                                      
+## 3                   NA                                      
+## 4                   NA                                      
+## 5                   NA                                      
+## 6                   NA                                      
+## 7                   NA                                      
+## 8                   NA                                      
+## 9                   NA                                      
+## 10                  NA
+</code></pre>
+
+<pre><code class="r">
+# description for 10100101
+SCC[which(SCC$SCC == &quot;10100101&quot;), ]
+</code></pre>
+
+<pre><code>##        SCC Data.Category
+## 1 10100101         Point
+##                                                 Short.Name
+## 1 Ext Comb /Electric Gen /Anthracite Coal /Pulverized Coal
+##                                EI.Sector Option.Group Option.Set
+## 1 Fuel Comb - Electric Generation - Coal                        
+##                 SCC.Level.One       SCC.Level.Two SCC.Level.Three
+## 1 External Combustion Boilers Electric Generation Anthracite Coal
+##    SCC.Level.Four Map.To Last.Inventory.Year Created_Date Revised_Date
+## 1 Pulverized Coal     NA                  NA                          
+##   Usage.Notes
+## 1
+</code></pre>
+
+<h3>Question 1 : Have total emissions from PM2.5 decreased in the United States from 1999 to 2008? Using the base plotting system, make a plot showing the total PM2.5 emission from all sources for each of the years 1999, 2002, 2005, and 2008.?</h3>
+
+<p>
+Let&rsquo;s utilize a plot depicting the total emissions, over the years, across all sources to understand the fluctuation of emission from PM2.5.
+</p>
+
+<pre><code class="r"># Group emissions by year across all sources and find the total emission for
+# each of the years
+gdf = ddply(NEI, c(&quot;year&quot;), function(x) c(TOTAL = sum(x$Emissions)))
+</code></pre>
+
+<pre><code class="r">plot(gdf$year, gdf$TOTAL, type = &quot;o&quot;, ylim = c(0, max(gdf$TOTAL)), xlim = c(1998, 
+    2010), col = &quot;red&quot;, xlab = &quot;Year&quot;, ylab = &quot;Total PM2.5 Emission (Tons)&quot;, 
+    main = &quot;Total PM2.5 Emissions (in Tons) from Year 1999 to 2008&quot;)
+</code></pre>
+
+<p><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAfgAAAH4CAMAAACR9g9NAAAApVBMVEX9/v0AAAAAADkAAGUAOTkAOWUAOY8AZo8AZrU5AAA5ADk5AGU5OQA5OTk5OWU5OY85ZmU5ZrU5j7U5j9plAABlADllAGVlOQBlOY9lZjllZmVlZrVlj49ltf2POQCPOTmPOWWPZgCPtY+P27WP29qP2/21ZgC1ZmW1tWW124+1/rW1/v3ajzna24/a/rXa/tra/v39tWX924/9/rX9/tr9/v3/AACtE/EgAAAAN3RSTlP//////////////////////////////////////////////////////////////////////wD/rn+PdAAAAAlwSFlzAAALEgAACxIB0t1+/AAAEdFJREFUeJztnQ2Dorgdxo/Z61Tv2tu2unt3bXXa7UnbG287qMz3/2glb4gSNZAACc/z2xdmlISYH0n+IIFvSgLJN1MXgEwDxYNC8aBQPCgUDwrFg0LxoFA8KBQPCsWDQvGgUDwoFA8KxYNC8aBQPCgUDwrFg0LxoFA8KBQPCsWDQvGgUDwoFA9KQPGnbSZZnF/KN/WPx/WHV7WUK23k6qvqhX2WPb9Vq2aZWqEsD8vM/KLXfto1N2SyevTaNfunXWs1S6GvOCxX9U9XBbFsQn6WqtSb++sdlotSfTrbUpK3stBVJIq8KM9Lkerxh79mUPF5dlP80+60ffpDVUsiVbXIs1p2WWT3xffkuLbYfSy+zE2t5o90yuxWQv+d7FROYg314Vat5Y2NmSrKdXn1UqUS+1snwnb1h6UswF6WX9bpQmqsxJ3Fq/a9qsT/XL10XP+pSnRciz1Bf9b92bNauxQ7w++31afei75CZiW6BZGjXqrs1YarLX/4z8W7Klud9PyupdCWtIVyIT/O8/+qUouPo9duFktn9uFV/NMZbsrSVMBJp5Q5/VGYK6r/qs29Xi/NxhZ1oVRVqCoSuYuPcV6q6uuoagjxuWpDqvBmh7SJ/7LcVJ/+71UimTBXpZfptJeGeIP6uOdsG9nrDZtmfNkaqu3ttPjLNn5RaEtaXQYjXr5o1m4WS+VWtXbVWNUqqzoflV7m9LIrzuKfdtfLshafN0pqqkgmbSyV+M59/QDiD0tZw9V/prtSptpd/b/Wq3L/4b+qxVX1oJZqjYu1n9+KTOzb2Ubk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" alt="plot of chunk unnamed-chunk-5"/> </p>
+
+<p>
+From the above graph it is clearly evident that emissions from PM2.5 has decreased from year 1998 to 2008
+</p>
+
+<h3>Question 2 : Have total emissions from PM2.5 decreased in the Baltimore City, Maryland (fips == &ldquo;24510&rdquo;) from 1999 to 2008? Use the base plotting system to make a plot answering this question.</h3>
+
+<pre><code class="r">
+# Extract emission data for Baltimore City (fips == &#39;24510&#39;)
+gdf = NEI[which(NEI$fips == &quot;24510&quot;), ]
+
+# For the city of Baltimore, group emissions by year across all sources and
+# find the total emission for each of the years
+gdf = ddply(gdf, c(&quot;year&quot;), function(x) c(TOTAL = sum(x$Emissions)))
+
+# Plot
+plot(gdf$year, gdf$TOTAL, type = &quot;o&quot;, ylim = c(0, max(gdf$TOTAL)), xlim = c(1998, 
+    2010), col = &quot;red&quot;, xlab = &quot;Year&quot;, ylab = &quot;Total PM2.5 Emission (Tons)&quot;, 
+    main = &quot;Total PM2.5 Emissions (in Tons) for Baltimore City from Year 1999 to 2008&quot;)
+</code></pre>
+
+<p><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAfgAAAH4CAMAAACR9g9NAAAAqFBMVEX9/v0AAAAAADkAAGUAOTkAOWUAOY8AZo8AZrU5AAA5ADk5AGU5OQA5OTk5OWU5OY85ZmU5ZrU5j7U5j9plAABlADllAGVlOQBlOY9lZjllZmVlZrVlj49ltf2POQCPOTmPOWWPZgCPtY+P27WP29qP2/21ZgC1ZmW1tWW124+1/rW1/tq1/v3ajzna24/a/rXa/tra/v39tWX924/9/rX9/tr9/v3/AABIAsE1AAAAOHRSTlP///////////////////////////////////////////////////////////////////////8A/4V6AzUAAAAJcEhZcwAACxIAAAsSAdLdfvwAABKHSURBVHic7Z0Jf9u2HYZLZUvldmvWyb22yem6iNs6a10ki/7+32zEwRuUwQPkH3zf55eEsUSAIB7iokngi4xA8sXaCSDrQPGgUDwoFA8KxYNC8aBQPCgUDwrFg0LxoFA8KBQPCsWDQvGgUDwoFA8KxYNC8aBQPCgUDwrFg0LxoFA8KBQPCsWD0hB/e0o0++qj9Fj+9+Xx3bPZ6p2OevdD/sE5Sd5/zndNErNDll0fkuIHu/fuVD9QEdVbn7U5706d3RyJbnF9OJT/ayWkOLSOQZ1EIzH5yfukqhXRoRa8mQznweucdRryWI7397s+7O3RXFtN2onC+lH5tX9TfJr0it+dbk+7P+QJVaHyTZqUsrNLcl/8SF4eHXbfFp+lhbzUnaM2jTXz+lx79u7n0khJO7hHdPm5HJT+O+diYlJ7mFQfOtuegxV+UpPEdlV/fdBnf9ZR6Dzd6/PJxVXiTfk+5OJ/yj96efxTHujlUV0J9nDnyrPZW+fKl0/5gc+qrtBRqWpBxWi3Jnpz4PzI7/7V+NZEa4NW3zoS7Qh7MdmhTyffs9xv95O5IM2h9b/Vuf5Hn7z6sJ7yrB36nCRFHhfadLWkg3/5pKM8lAf/Xy3UoZkn9kzePau/9jjHLCtSVKU2j+mPSvwl/yc/1+f2tjjYvkyr8WD8qNjVSbnFp+bKvdlzN6XBJf6Xh2OegL/lgXTA1AjX4ayXmvgCc+Qq2lr09sBFMd5nxbcmWnv5ld+6Eu0Ia9NgxTf2018U4huJqYuvUp61QpsfD7Vk3J6O1XWjLtW00KXFN5LQiNle23tTWIuIixRVqb19PF0q8btTe1uJLw5TJi41e6mtU/z1Qedw/k9RYxhT3ar+H4+H7Pzu36bE5UkxW7NHY+/3ny+JupiTo4pXRWWLaVFcM/OZPbAuPCq64tvyGrLiD+XBOonuhrXlwFSA9f32RcT2jJrnmtoKpp7yVmh9iCL6S1G6qpYib4wbBy9C2UjqMZe1hj6vRsT2nKsG4FJV9Spwc9s90yqY0nDQ3zrF63h1xWrEqyjb4k3tc0rzi/j9f00OX4qsU5EU1X5N/N6egRGvv9BVfFJW9eWBbeG2RdDmnE5bEUVVlbQT3Q1ry4HJjuZ+dfGJKffluVbiq5S3QtsiayJyiL89vf/tsdbmF6FsJPWYy3PR/61FbFJU26WIQPUWf9KCm9vOmZah8igGiNdd9Ib4siDtTud3vz4eTNE6N3twZ5MNtap+r38oxJt48yB22xKvLwVdkMuMrYkvvnWL74RN3xKvzyxVLWDtXJviTcrviW9U9bZveM5bw1p/yynexJw10lJGXKTIIV5HWpxZe9sVb/wMqOqVwaJL0BF/ffiL+kd3mcre1iWpl/g+8UX67LZV1dfV2r3ui78TtlHia/t1xTfO1SW+FbreEqmiWXXurPjaGK5KSa2q7xNfRlykqCv+qntWps2sb7tnaiOyEXt07szA4ZLcKfH5yZpDVi1N1W+zuWG+aIsvLuVWISu6TlZe8W154F7xd8I2mtnaft2qvnGuadm5q+lphU6T6lSr4VwZXLXZRTJrl2DVuesTX0ZcpKgr3nRiD52tPVirc1f2AHyGc/qC1X3Qw9ko7YjP49nrQPakzV7qKHanXvG6IjbXf220WA3JatV1WWbKXr1LfH/YVtVRDcia4nWjUDtXdfK/tcW3Q6dJbfzfuIGj807nT0d8NZzrFV9GbFPkqOrV0Q6ObVaIqw/nCj/OGzjSuQy9o1KGO7y9UyDOI9McmqjEO+/ceVDeuVuespWRRlTi63cEB1Ddq1+c6p6cNOIST2aD4kGheFAoHhSKB4XiQaF4UCgeFIoHheJBoXhQKB4UigeF4kGheFAoHhSKB4XiQaF4UCgelCniEyKZgOInhCWhoXhQKB4UigeF4kGheFAoHhSKB4XiQaF4UMSIf319nXAsMhQp4l/tX7IQcsS/UvySyBGfsa5fEiniVRtP8QsiRryC5pdDlHjW9sshSzwL/WJIE0/zCyFOPM0vgzzxNL8IAsXT/BJIFE/zCyBSPM2HR6Z4mg+OUPG8lRMaqeJZ6AMjVzzNB2WyeLOWU+JYYWPyo1c0H5Cp4tX6eYpLbYE1v6g9oPlwTBX/8v1zY+sftQ8RmY/tcQLRJT4i89E9Mzi5jber8YVo4xWxZGZ0zwwK7tUbIsnNvKKPq64XLz6O/HyFa+NDDucKxOeodS4+nXWEd+4MwnP0tfOfCJA9nCuQnKP1Kl5yOltEUeIl5+hr7w+ykT6cK5Capa93fxSM/F69RWSWdnvyIpPpIoB4z7kThyIwS11JEphMJzEM5yzSBsru9AhLZC+RdO4MojK1LzGiEtlPHMO5AjmZeqf6kZPIe0RV4uVk6t10SEnkXWIZzhWIyNQ3ehsi0vgW0QznCgTk6ptJEJDGN4lO/Oq56jO4WDuNHswxnDuky1X12dq56nd0+ebn6NylufXrh0U6d5o1c9Xz2NsXr4Zxl8NSwznLardy/A8s3vxcw7klS3y2Vr4OOap08zMM55T584JtvGaFfB1Yzwg3H1+v3rJ4vg49IMUHYtmMHdGtkG0+XvGLZuyoY4k2H7H45TJ27ChCsvmYxS+VsaMPQ/GhWGJAP+UYgs3HLX6BrJ12ALnmYxcfOmunRi/WfPTig2bt9KaE4sMRLm/niFmq+Q2ID5W3M/UchZrfgvgweTtbpDLNb0J8gLydcaBI8QGZO3NnjU+k+Y2In/dWztz3hSSa34r4OXM3QMMxe4yT2Y74uXI3xG1gig/KLNkbxpE881sSP0f2hjIkzvymxE+/sy77LuCcbEu84N+lUXxYpvzyPKwbYea3Jl7w4zKyzG9O/MiCu8CzPBQfmhE5vIgUUea3KH74uw/Sn9oMwCbFD8zh5XwIMh/RdGdDGJDDS756uyHxC09+5I3Q95nlmI9rurMBCJ3BQIz5rZZ4vyxeYYYFKeZjm+5sAG9bXUPCZsSPjnoB3piOTv60GgHZtPi7mbyaABnmNzqcK+jN5DWnwhZhfrudO0NPJq+a95sQL3Y4V+DK5bVnvpdgfusl3pXL6+f7+inY8nCuoJXLaxd3zfpp2Hav3vDa+8NqrJ+KeBYjmkCtkK+f44bV0zFH507V9t0mXk6Jz8p8FlHNG9ZOyQzidYf++u3QqJflVa32vHZmN1g5MTOI1/MXix3OWeSt7x67+Mfdp5+fF5+9ejCvmbACv7b56Z2721Oyzy6Ch3Oa12ztnO6yanoQhnOaV2E1vWLNFMGIl0jU4q8Pye4kv3MnkxXNz3Gv/vZ0oPhxrGd+nt/OpXuKH8dq5mf67dz5d19T/BiiFZ8P5A9q41iNiOJ9WMu8n/iL/qXLcdaoiWEl8z7iL8lebW5Pw9RTvB/rmPcQ//JjeTf2n937c6OjJhax4gNFTQpWMe8n/vz+85ltfDDWMO8l/uW7U/7n2h2xTYmaVKxg3k/89895maf4YEgVn52T3enCqj4cy5tn504Gi5uneCEsbX7InTvHUzYToiYNRIp/eRzYvPtETZosbN63Vz9/1KTFsub9qvr0MH/UpIVA8f0vRk6ImrRZ1Dx79YJY0jzFS2JB837ib0+J873IKVGTLtLEq8do9a/o5oyaOFjO/IDh3NBBHcWPYDHzLPHCWMo823hhyBIfImriZiHzPg9bjrphS/FjWcY8xctjEfMULw8x4h/t9GXOe/WyJzGOkyXMTy3x8qc0jZEFzE8VL34S4zgJb54lXiQyxP+1/NHx7pz8SYyjJLh5vi0rlNDm+X68VAKb3/iaNBEjXDw7d8EIa37za9JETFDzLPGCCWkeYE2aeFlfPN+dW4eA5gO8OydvTZp4CWd+8rtzHM4FJZj5qe/OsXMXlnXF33l3jsO5wIQyz+GcdAKZ53BOPGHM87l68awonm/SrEoQ85PfneOaNOEJYX5qieeaNEsQwPzUNp5r0izBauL74Zo0izC/ea5JEwezm/d6vPpXznq1OnMvkcrXpONAaZ/VPMXHwezLoHNpkjiYfRl0Lk0SCau08VyaZHtwaRJQ2LkDheJBYa8eFPbqQWGvHhT26kFh5w4UigeFv5YFhSUeFL4mDYrvOH7+qMmqcIlRUDzH8VxidGv43sBhG78x2MaDwjYeFLbxoHAZcVB45w4Uzl4NiufSJNcPn91dPE5+FClTxXO6s0hhiQdlqnhOdxYpk8WPjpqsyuQlRkdHTVaFwzlQOJctKFyMCBSWeFA4ezUonsM5pZezV28JP/G6Bb9+6xklFyOKAD/x6v5N/736nuqA4iXjdQNn9+lnVeI/OOr6O9UBxUvGc9ryZJ9dnDfu7lQHFC+ZyeP4/uqA4iUz/dGr3uqA4iUzQDx/O7cl+LAlKBQPio/4/oWmpkRNVsVD/J2Fpu4+pUHxkvG8V9+z0FRWLE02ImqyKp4lPnMvNKXofZWW4iXj08b3LzQ1JWqyKuzVg0LxoFA8KF6dOz5Xvz18Svw5STgjxtbwrOrVtFdD5VO8ZAa08Smr+g3hKT5NBi9JQ/Gi8Wzjh0r3iJqsCnv1oHAcDwrFg+L5IMaYRp7iJeP5a9mha855RE1WxfNBjNvH4fNXU7xkfMU/Da/rKV4yFA8KZ70ChcM5UCgeFIoHheJBoXhQ2KsHhSUeFE5iDMrUJUY5pWmk+C4xetln571jB05iHCm+S4wW89m1YYmPFL957j6e8j/u38lzEuM48Wvjc+eXwW9UULxkOJwDZcAy4u6pUDici5Mhd+5cE9azcxcpA0q8Ew7nIoVr0oDiJ16/ReVemoTDuTjxnK9ejeTOAxeloXjJTO7VO6LkmjQRMLnEczgXJ1PbeHbuIoVLjILiPYlxDyzxkTJVPIdzkTJZ/OioyarwKVtQWOJBoXhQpornmjSRMvkJHK5JEyfTH73imjRRwmfuQKF4UCgeFIoHheJBoXhQKB4UigeF4kGheFAoHhSKB4XiQaF4UCgeFIoHheJBoXhQKB4UigeF4kGheFAoHhSKB4XiQaF4UCgeFIoHheJBoXhQKB4ULjgICuerB4VTmoLCEg/K5DaeU5rGCXv1oFA8KBzOgcLOHSgBhnNcjCgGWOJB4XAOFPbqQaF4UObo3Kna3rEoHcVLZgbxukN//XZo1GRVZhB//fCZv52LjsniH3efflYl/gOHc1ExvXN3e0r22YXDuchgrx4UigeF4kGheFAoHhSKB4XiQaF4UCgeFIoHheJBoXhQKB4UigeF4kGheFAoHhSKB4XiQaF4UCgeFIoHheJBoXhQKB4UigeF4kGheFAoHhSKB4XiQaF4UCgeFIoHheJBoXhQKB4UigeF4kGheFC4Jg0oXKECFK5JAwpLPChckwYU9upBoXhQKB4UigeF4kGheFAoHhSKB4XiQaF4UCgelJDiiWTCiW9fBwwfUXiKBw1P8aDhKR40PMWDhqd40PAUDxp+RvEkJigeFIoHheJBoXhQKB4UigeF4kGheFAoHpSp4q9fP+tJM951Nl6hH5LkqF/IVS9hNzejw9sPR4evXg0fF/72lOxO09I/Lv+sDb/8myj+otL48njMzu8/F5vvTmrjE1rtev3qpPL5vM+am9Hh7Yejw+ecPS8cd/j06JpMYFD6R+WfteGZf9PEp7tf8mvs+uGzSkN9873XJXtR6UuPau/8Wm1uRoe3H44On5ebb37wE9+bfk+c4Ufnn7XhmX9zVPVN8QOuWEXriik3o8PbD8eHv3385FvVu9P/d++q3hV+dP5lDRtvhZtDvK7jdye7GdJGqwbxoCvGPKnNzejw9sPx4c8H7zbeFf76cNSZP/r4Y/MvMzY882+uzt2fP57sRrWvF9/eyctjrmhCiXeEtx9OOb6/+ADpH51/2eIlXqfAtEr5ZkiJVaUjy0a38c7w9sPR4c/6oXS/S8eZ/h+nnf/o/Mts/btcG6/rx32xGXDFWkWqutK92vpmdPjB3rsH9i3x7vCpd1XvTv/Y/MuMDc/8m6XEXxLdKlUbz86NKVzH0eN4Z/jiw9HH9xffm37PmtodfnT+LTmOJ7FC8aBQPCgUDwrFg0LxoFA8KBQPCsWDQvGgUDwoFA8KxYNC8aBQPCgUDwrFg0LxoFA8KBQPCrT425N+B8nvkd6NAS1eP8rs+wz/xsAWr0p7eiifiDZvHV+/+cH3RZaIARf/8t0v6t2H9FC+YP3184A3MiIGXLx5FV6/qli+A4ZR96OLL949MW+vpEle5VM8Aka8Le2PR13VUzwAxnKqXzLXr9p+daJ4BIzlvK5XNf05SX7/w5HiyYaheFAoHhSKB4XiQaF4UCgeFIoHheJBoXhQKB4UigeF4kGheFAoHhSKB4XiQaF4UP4PkW5cmAKI3WcAAAAASUVORK5CYII=" alt="plot of chunk unnamed-chunk-6"/> </p>
+
+<p>
+From the above graph it is clearly evident that in the City of Baltimore emission from PM2.5 decreased from year 1998 to 2008. However, the fall in the emission rate wasn&rsquo;t steady. As you can in the figure, the emission did decrease from 1998 to 2002, but bumped back up in 2005 before finally receding to lowest level in 2008.
+</p>
+
+<h3>Question 3 : Of the four types of sources indicated by the type (point, nonpoint, onroad, nonroad) variable, which of these four sources have seen decreases in emissions from 19992008 for Baltimore City? Which have seen increases in emissions from 19992008? Use the ggplot2 plotting system to make a plot answer this question.</h3>
+
+<pre><code class="r">
+# Extract emission data for Baltimore City (fips == &#39;24510&#39;)
+gdf = NEI[which(NEI$fips == &quot;24510&quot;), ]
+
+# For the city of Baltimore, group emissions by year across all sources and
+# find the total emission for each of the years
+gdf = ddply(gdf, c(&quot;type&quot;, &quot;year&quot;), function(x) c(TOTAL = sum(x$Emissions)))
+
+# Plot
+ggplot(gdf, aes(x = year, y = TOTAL, colour = type)) + geom_line() + xlab(&quot;Year&quot;) + 
+    ylab(&quot;Total PM2.5 Emission (Tons)&quot;) + ggtitle(&quot;Total Emission from PM2.5 in Baltimore City From Different Sources During the Year 1998-2008&quot;) + 
+    labs(fill = &quot;PM2.5 Emission Source Type&quot;)
+</code></pre>
+
+<p><img src="data:image/png;base64,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" alt="plot of chunk unnamed-chunk-7"/> </p>
+
+<p>
+Sources that have seen DECREASES in emission from 1999-2008 for Baltimore City:
+NONPOINT
+NON-ROAD
+ON-ROAD
+
+Sources that have seen INCREASES in emission from 1999-2008 for Baltimore City:
+POINT
+</p>
+
+</body>
+
+</html>
+
