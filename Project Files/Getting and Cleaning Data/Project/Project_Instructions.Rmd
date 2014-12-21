@@ -1,0 +1,265 @@
+<!-- Make sure that the knitr package is installed and loaded. -->
+<!-- For more info on the package options see http://yihui.name/knitr/options -->
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(plyr)
+library(ggplot2)
+library(gridExtra)
+library(reshape2)
+
+setwd("F:/My Development/My Testing Ground/Data Science/Data Science Cert - Code/datasciencecoursera/Getting and Cleaning Data/Project")
+```
+
+<!-- Replace below with the title of your project -->
+### Getting and Cleaning Data Course Project
+
+<!-- Enter the code required to load your data in the space below. The data will be loaded but the line of code won't show up in your write up (echo=FALSE) in order to save space-->
+
+<!-- In the remainder of the document, add R code chunks as needed -->
+
+### Introduction:
+
+This project reflects the implementation of some of the principles learned in this course. Some of these principles are:
+<ol>
+<li>Creating a tidy data from the original dataset</li>
+<li>Creating and uploading the project to a Github repository</li>
+<li>Documenting the steps as code book</li>
+</ol>
+
+### Data:
+
+The orginal dataset can be downloaded from this location: https://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Dataset.zip. The read.me file contained in the zip file elaborates on the various variables included in the dataset. For brevity, I'm mentioning some of the variables below.
+<ul>
+<li>tBodyAcc-XYZ</li>
+<li>tGravityAcc-XYZ</li>
+<li>tBodyAccJerk-XYZ</li>
+<li>tBodyGyro-XYZ</li>
+<li>tBodyGyroJerk-XYZ</li>
+<li>tBodyAccMag</li>
+<li>tGravityAccMag</li>
+<li>tBodyAccJerkMag</li>
+<li>tBodyGyroMag</li>
+<li>tBodyGyroJerkMag</li>
+<li>fBodyAcc-XYZ</li>
+<li>fBodyAccJerk-XYZ</li>
+<li>fBodyGyro-XYZ</li>
+<li>fBodyAccMag</li>
+<li>fBodyAccJerkMag</li>
+<li>fBodyGyroMag</li>
+<li>fBodyGyroJerkMag</li>
+</ul>
+
+The set of variables that were estimated from these signals are: 
+<ul>
+<li>mean(): Mean value</li>
+<li>std(): Standard deviation</li>
+<li>mad(): Median absolute deviation</li> 
+<li>max(): Largest value in array</li>
+<li>min(): Smallest value in array</li>
+<li>sma(): Signal magnitude area</li>
+<li>energy(): Energy measure. Sum of the squares divided by the number of values. </li>
+<li>iqr(): Interquartile range </li>
+<li>entropy(): Signal entropy</li>
+<li>arCoeff(): Autorregresion coefficients with Burg order equal to 4</li>
+<li>correlation(): correlation coefficient between two signals</li>
+<li>maxInds(): index of the frequency component with largest magnitude</li>
+<li>meanFreq(): Weighted average of the frequency components to obtain a mean frequency</li>
+<li>skewness(): skewness of the frequency domain signal </li>
+<li>kurtosis(): kurtosis of the frequency domain signal </li>
+<li>bandsEnergy(): Energy of a frequency interval within the 64 bins of the FFT of each window.</li>
+<li>angle(): Angle between to vectors.</li>
+</ul>
+Additional vectors obtained by averaging the signals in a signal window sample. These are used on the angle() variable:
+
+<ul>
+<li>gravityMean</li>
+<li>tBodyAccMean</li>
+<li>tBodyAccJerkMean</li>
+<li>tBodyGyroMean</li>
+<li>tBodyGyroJerkMean</li>
+</ul>
+
+
+
+### Steps Performed in the R Script (run_analysis.R):
+
+Following is the list of steps performed.
+<h4> Preliminary Step </h4>
+Load the training and test datasets into two variables trainData and testData, respectively. Once loaded, we move onto the next step.
+```{r echo=TRUE, eval=FALSE}
+#### TRAINING DATA FRAME ########################################
+# Load the training data into a dataframe. ######################
+#~ Load the feature data
+trainX = read.table("./UCI_HAR_Dataset/train/X_train.txt", header= FALSE, sep="")
+#~ Load the subject data
+trainSub = read.table("./UCI_HAR_Dataset/train/subject_train.txt", header= FALSE, sep="")
+#~ Load the activity data
+trainActivity = read.table("./UCI_HAR_Dataset/train/y_train.txt", header= FALSE, sep="")
+#~ Finally construct the full training dataset
+trainData = cbind(trainX,trainSub,trainActivity)
+getwd()
+
+#### TEST DATA FRAME ############################################
+# Load the test/validation data into a dataframe. ###############
+#~ Load the feature data
+testY = read.table("./UCI_HAR_Dataset/test/X_test.txt", header= FALSE, sep="")
+#~ Load the subject data
+testSub = read.table("./UCI_HAR_Dataset/test/subject_test.txt", header= FALSE, sep="")
+#~ Load the activity data
+testActivity = read.table("./UCI_HAR_Dataset/test/y_test.txt", header= FALSE, sep="")
+#~ Finally construct the full test dataset
+testData = cbind(testY,testSub,testActivity)
+
+```
+
+<h4>Step 1: Merges the training and the test sets to create one data set.</h4>
+Merge training and test data table into one dataframe and provide the column names
+```{r echo=TRUE, eval=FALSE}
+#### STEP 1 : MERGE DATA FRAMES #################################
+# Merge training and test data table into one dataframe and
+# provide the column names
+mergedData = rbind(trainData, testData)
+variableNames = read.table("./UCI_HAR_Dataset/features.txt", header= FALSE, sep="")
+names(mergedData) = variableNames$V2  # Feature column 
+names(mergedData)[562] = "Subject"    # Subject column 
+names(mergedData)[563] = "Activity"   # Activity column
+```
+
+<h4>Step 2: Extracts only the measurements on the mean and standard deviation for each measurement. </h4>
+From the merged dataset (mergedData), find those indices whose variables represent a 'Mean' or 'Std'. In other words,
+find those variables/columns that either have a 'mean' or 'std' in their names. Using the indices, find subset from 
+'mergedData' where the column number/index matches those indices.
+```{r echo=TRUE, eval=FALSE}
+### STEP 2: EXTRACT REQUIRED VARIABLES/COLUMNS ###############
+# From the merged dataset (mergedData), find those indices whose variables represent a 'Mean' or 'Std'. In other words,
+# find those variables/columns that either have a 'mean' or 'std' in their names. Using the indices,
+# find subset from 'mergedData' where the column number/index matches those indices.
+indices = c(grep("std+",variableNames$V2, value=FALSE), grep("mean+",variableNames$V2, value=FALSE))
+dataWithStdMean = mergedData[,indices]
+```
+
+
+<h4>Step 3: Uses descriptive activity names to name the activities in the data set. </h4>
+For the 'mergedData' dataset (created above), change the values in the activity as follows:
+<ul>
+ <li>change 1 to 'WALKING'</li>
+ <li>change 2 to 'WALKING_UPSTAIRS'</li>
+ <li>change 3 to 'WALKING_DOWNSTAIRS'</li>
+ <li>change 4 to 'SITTING'</li>
+ <li>change 5 to 'STANDING'</li>
+ <li>change 6 to 'LAYING'</li>
+</ul>
+```{r echo=TRUE, eval=FALSE}
+mergedData$Activity = sub("1+","WALKING", mergedData$Activity)
+mergedData$Activity = sub("2+","WALKING_UPSTAIRS", mergedData$Activity)
+mergedData$Activity = sub("3+","WALKING_DOWNSTAIRS", mergedData$Activity)
+mergedData$Activity = sub("4+","SITTING", mergedData$Activity)
+mergedData$Activity = sub("5+","STANDING", mergedData$Activity)
+mergedData$Activity = sub("6+","LAYING", mergedData$Activity)
+```
+
+
+<h4>Step 4: Appropriately labels the data set with descriptive activity names. </h4>
+For the 'mergedData' dataset (created in Step 3), change the existing column names with more user friendly names.
+```{r echo=TRUE, eval=FALSE}
+#~ Remove all ()
+names(mergedData) = gsub(pattern="\\(\\)","", names(mergedData))
+#~ Rename all 'mad' to 'medianDeviation'
+names(mergedData) = gsub(pattern="mad","medianDeviation", names(mergedData)) 
+#~ Rename all 'sma' to 'signalMagtdAread'
+names(mergedData) = gsub(pattern="sma","signalMagtdArea", names(mergedData))
+names(mergedData)
+```
+
+<h4>Step 5: Creates a second, independent tidy data set with the average of each variable for each activity and each subject. </h4>
+From the 'mergedData' dataset (created in Step 4), create another dataset - 'featureAverageData' that contains the average of each feature/column for each combination of activty and subject. That is, find the mean of all features from column 1 through 561 in the 'mergedData' dataset. We are excluding column 562 and 563 b/c it contains the grouping factors 'Subject' and 'Activity', respectively.
+
+```{r echo=TRUE, eval=FALSE}
+featureAverageData = aggregate(mergedData[,1:561], by=list(Activity = mergedData$Activity, Subject = mergedData$Subject), FUN=mean, na.rm=TRUE)
+featureAverageData
+```
+
+
+
+### Cluster Analysis:
+```{r echo=TRUE, eval=TRUE}
+load("./clusteringEx_data/data/samsungData.rda")
+
+# all names
+names(samsungData)
+
+# all possible activities performed by the subjects
+table(samsungData$activity) 
+
+# all of the subjects whose activities were recorded
+table(samsungData$subject)
+```
+
+
+<h3>Plotting average acceleration for first subject</h3>
+```{r echo=TRUE, eval=TRUE}
+# Convert activity to a categorical variable
+samsungData = transform(samsungData, activity=factor(activity))
+
+# Create a subset just for the first subject
+sub1 = subset(samsungData, subject==1)
+
+# Plot a graph for the mean of the totalBodyAcceleration along the X axis
+p1 = ggplot(sub1, aes(x=1:nrow(sub1), y=tBodyAcc.mean...X, color=activity)) +
+     geom_point()+
+    xlab("Row Index") +
+    ylab("tBodyAcc.mean...X") +
+    ggtitle("Mean of total body acceleration along X axis for each activity type")
+
+p2 = ggplot(sub1, aes(x=1:nrow(sub1), y=tBodyAcc.mean...Y, color=activity)) +
+     geom_point()+
+    xlab("Row Index") +
+    ylab("tBodyAcc.mean...Y") +
+    ggtitle("Mean of total body acceleration along Y axis for each activity type")
+
+grid.arrange(p1,p2, ncol=1, nrow=2)
+
+
+# Cluster the total body acceleration (along x, y and z) using the Euclidean distance
+hc = hclust(dist(sub1[,1:3]), method="ave")
+plot(hc, hang = -1)
+
+```
+
+
+<h3>Plotting the maximum acceleration for first subject</h3>
+```{r echo=TRUE, eval=TRUE}
+# Plot a graph for the mean of the totalBodyAcceleration along the X axis
+p1 = ggplot(sub1, aes(x=1:nrow(sub1), y=tBodyAcc.max...X, color=activity)) +
+     geom_point()+
+    xlab("Row Index") +
+    ylab("tBodyAcc.mean...X") +
+    ggtitle("Mean of maximum body acceleration along X axis for each activity type")
+
+p2 = ggplot(sub1, aes(x=1:nrow(sub1), y=tBodyAcc.max...Y, color=activity)) +
+     geom_point()+
+    xlab("Row Index") +
+    ylab("tBodyAcc.mean...Y") +
+    ggtitle("Mean of maximum body acceleration along Y axis for each activity type")
+
+grid.arrange(p1,p2, ncol=1, nrow=2)
+
+# Cluster the maximum body acceleration (along x, y and z) using the Euclidean distance
+hc = hclust(dist(sub1[,10:12]), method="ave")
+plot(hc, hang = -1)
+
+
+```
+
+
+<h3>Applying Singular Value Decomposition for better visualization and analysis</h3>
+<b>Plotting average acceleration for first subject after applying Singular Value Decomposition</b>
+```{r echo=TRUE, eval=TRUE}
+svd1 = svd(scale(sub1[,-c(562, 563)]))
+
+# Plot a graph for the mean of the totalBodyAcceleration along the X and Y axis
+plot(svd1$u[,1], col=sub1$activity, pch=19)
+
+plot(svd1$u[,2], col=sub1$activity, pch=19)
+
+```
+

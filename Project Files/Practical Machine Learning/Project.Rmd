@@ -1,0 +1,124 @@
+---
+title: "Predict Quality of Barbell Lifting Exercise"
+output: html_document
+---
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(plyr)
+library(randomForest)
+library(plyr)
+library(ggplot2)
+library(gridExtra)
+library(caret)
+set.seed(3433)
+```
+
+### Synopsis
+As part of self quantification, we have to create a machine learning model that can predict the quality of an individual's barbell lifting exercise. The dataset (both training and testing) used for this exercise was captured using self tracking device. The dataset consisted of 19622 observations and 160 variables. Utilizing correlation and the fact that this modeling is to quantify the quality of barbell lifting, I picked the following variables to be included in the training and testing datasets.
+```{r eval=FALSE, echo=TRUE}
+"gyros_dumbbell_x","gyros_dumbbell_y", "gyros_dumbbell_z", "accel_dumbbell_x", "accel_dumbbell_y", "accel_dumbbell_z",
+           "magnet_dumbbell_x", "magnet_dumbbell_y", "magnet_dumbbell_z", "gyros_forearm_x", "gyros_forearm_y", "gyros_forearm_z",
+           "accel_forearm_x", "accel_forearm_y", "accel_forearm_z", "magnet_forearm_x", "magnet_forearm_y", "magnet_forearm_z"
+```
+
+Given the multi-level outcomes of this dataset, I decided to create a Random Forest model to predict the outcome.
+
+### Model Creation
+As part of the training, I'll split the given training dataset into two - training dataset and validation dataset. This is for cross validation and to identify out-of-bag/ in-bag error. I want to find out how accurate our trained model is.
+
+#### Preliminary Preparation
+```{r eval=TRUE}
+## read data
+training = read.csv("pml-training.csv") 
+testing = read.csv("pml-testing.csv") 
+
+cNames = c("gyros_dumbbell_x","gyros_dumbbell_y", "gyros_dumbbell_z", "accel_dumbbell_x", "accel_dumbbell_y", "accel_dumbbell_z",
+           "magnet_dumbbell_x", "magnet_dumbbell_y", "magnet_dumbbell_z", "gyros_forearm_x", "gyros_forearm_y", "gyros_forearm_z",
+           "accel_forearm_x", "accel_forearm_y", "accel_forearm_z", "magnet_forearm_x", "magnet_forearm_y", "magnet_forearm_z")
+
+dfTrain = training[,cNames]
+dfTrain = cbind(dfTrain, training$classe)
+colnames(dfTrain)[19] = "classe"
+dfTest  = testing[,cNames]
+
+## Split the training into two for cross validation and out-of-bag/ in-bag error. In other words, I want to find out the
+## accuracy of our trained model
+inTrain = createDataPartition(y=dfTrain$classe, p=0.75, list=FALSE)
+dfT = dfTrain[inTrain,]
+dfV = dfTrain[-inTrain,]
+```
+
+#### Data Exploration
+Before we dig further, let's explore the training dataset
+```{r eval=TRUE}
+## Exploration
+#~~~ frequency
+p1 = ggplot(dfT, aes(x=classe)) + geom_histogram(aes(y=..density..),binwidth=.2, colour="black", fill="white") + 
+  ggtitle("'classe' Frequency in Training Set") +  
+  geom_density(alpha=.2, fill="#FF6666")
+
+p2 = ggplot(dfV, aes(x=classe)) + geom_histogram(aes(y=..density..), binwidth=.2, colour="black", fill="white") + 
+  ggtitle("'classe' Frequency in Validation Set")+  
+  geom_density(alpha=.2, fill="#FF6666")
+
+grid.arrange(p1, p2)
+
+#~~~ boxplot
+b1 = ggplot(dfT, aes(x=classe, y=gyros_dumbbell_x)) + geom_boxplot() 
+b2 = ggplot(dfV, aes(x=classe, y=gyros_dumbbell_y)) + geom_boxplot()
+b3 = ggplot(dfV, aes(x=classe, y=gyros_dumbbell_z)) + geom_boxplot()
+
+grid.arrange(b1, b2, b3, main = "Prespective of Gyro Dumbell Activities") # notice the outliers; hoping PCA processing should smooth that out.
+```
+
+#### PreProcessing
+As shown in the exploration stage, there are outliers. For eg, notice the "gyros_dumbell_X" value for 'classe' A. In order to alleviate this problem, we turn to PCA Preprocessing.
+
+```{r eval=TRUE}
+## PCA Processing
+preProc = preProcess(dfT[,-19], method="pca", thresh=0.80)
+trainPC = predict(preProc, dfT[,-19])
+testPC  = predict(preProc, dfV[,-19])
+
+```
+
+#### Training the Model and Predicting the Outcome
+Now on to the most important part - training the Random Forest Model and predicting the outcome of the validation/testing dataset. This is to verify the accuracy of the model.
+```{r eval=TRUE}
+## Training the model using random Forest
+model = randomForest(dfT$classe ~ ., data=trainPC)
+
+## Predicting the outcome of 'testPC' dataset using
+## the trained model
+predicted = predict(model,testPC)
+```
+
+#### Analyze Accuracy of the Model
+How good is our model? For that we calculate two entities - error rate with respect to the training data and error rate with respect to the validation data.
+The error rate with respect to the training set is ~ 15%. 
+```{r eval=TRUE}
+## error rate with respect to training set
+mean(predict(model)!=dfT$classe)
+```
+
+
+Now let's examine error rate on the testing/validation set. Here we are using cross validation to understand the accuracy of our trained model. Following is the confusion matrix that gives a summary statistics of our cross validation. The numbers in the table indicates observations in the validation/testing set that were predicted/not predicted correctly. For eg, the model predicted the 'classe A' correctly for 1312 observations in the testing dataset. More over, the 'Sensitivity' & 'specificity' row shown below indicates these prediction accurracies for each 'classe' in percentages. Overall, the accuracy of this model is 85%, which is not bad! However, there is still room for improvement.
+```{r eval=TRUE}
+
+## error rate with respect to testing/validation set
+confusionMatrix(dfV$classe,predict(model,testPC))
+```
+
+
+### Applying the Model
+Our trained Random Forest model predicted the outcome (classe) for each of the 20 observations provided in the testing dataset (note, don't confuse this with validation/testing dataset). The 20 observations in the test dataset belong to the following 'classe' respectively: B, A, C, A, A, E, D, B, A, A, C, C, B, A, E, E, A, B, B, B. 'classe' A did the weight lifting activity properly, while those observations belonging to 'classe' B, C, D, E did the weight lifting incorrectly.
+
+```{r eval=TRUE}
+# Now let's apply the trained model to an actual test dataset. 
+outputTestPC  = predict(preProc, dfTest)
+outputResult = predict(model,outputTestPC)
+outputResult
+
+```
+
+
