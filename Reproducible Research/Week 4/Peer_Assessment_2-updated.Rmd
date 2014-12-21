@@ -1,0 +1,68 @@
+US National Weather Service Storm Data: Economical and Personal Costs Analysis
+========================================================
+
+<p>
+I'm copying an RPub publication from my fellow Coursera student. Here's the full article: http://rpubs.com/PedroCebrian/RepResPeer2
+For sake of brevity, I'm only including the code. Read through the original article if you need further information.
+</p>
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(plyr)
+library(ggplot2)
+library(gridExtra)
+setwd("F:/My Development/My Testing Ground/Data Science/Data Science Cert - Code/Reproducible Research/Week 4")
+```
+
+
+## Data proccessing
+
+<p>
+The first task is to unzip and read the data from the downloaded file.
+</p>
+
+```{r echo=TRUE}
+fname = "repdata-data-StormData.csv.bz2"
+con = bzfile(fname)
+data = read.csv(con)
+unlink(con)
+```
+
+```{r echo=TRUE}
+dataVars = data[ ,c("EVTYPE","FATALITIES","INJURIES","CROPDMG",
+                      "CROPDMGEXP","PROPDMG","PROPDMGEXP")]
+
+rm(data) # remove the data variable that was created above
+
+# Assign numbers for each of the magnitudes (k, K, h, H etc).
+# Note, this is the key piece that I missed. I have a nested loop
+# which was very inefficient and ugly.
+levels(dataVars$PROPDMGEXP)<- c(1,1,1,1,1,10,100,1000,10000,
+                                 1000000,1000000,10000000,
+                                 100000000,1000000000,100,100,
+                                 1000,1000000,1000000)
+
+levels(dataVars$CROPDMGEXP)<- c(1,1,1,100,1000000000,1000,1000,
+                                 1000000,1000000) 
+
+# Convert the above maginitudes to numbers
+dataVars$PROPDMGEXP <- as.numeric(as.character(dataVars$PROPDMGEXP))
+dataVars$CROPDMGEXP <- as.numeric(as.character(dataVars$CROPDMGEXP))
+
+
+
+dataFinal <- dataVars[ ,c("EVTYPE","FATALITIES","INJURIES")]
+dataFinal$FATALITIES.INJURIES <- with(dataVars, {FATALITIES + INJURIES})
+dataFinal$CROP.DAMAGES <- with(dataVars, {CROPDMG * CROPDMGEXP})
+dataFinal$PROP.DAMAGES <- with(dataVars, {PROPDMG * PROPDMGEXP})
+dataFinal$DAMAGES <- with(dataVars, {PROPDMG * PROPDMGEXP + CROPDMG * CROPDMGEXP})
+
+```
+
+
+
+```{r echo=TRUE}
+total =  tapply(dataFinal$CROP.DAMAGES, dataFinal$EVTYPE, sum)
+total = sort(total, decreasing = TRUE)
+total
+```
+
