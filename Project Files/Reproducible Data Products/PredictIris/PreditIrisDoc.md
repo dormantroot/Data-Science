@@ -27,17 +27,17 @@ Random Forest Model
             
 pred         setosa versicolor virginica
   setosa         15          0         0
-  versicolor      0         15         1
-  virginica       0          0        14
+  versicolor      0         15         3
+  virginica       0          0        12
 ```
 
-![plot of chunk unnamed-chunk-2](PreditIrisDoc-figure/unnamed-chunk-2.png) 
+![plot of chunk unnamed-chunk-2](PreditIrisDoc-figure/unnamed-chunk-2-1.png) 
 
 How Do I Get my Hands on the Application?
 ========================================================
 Now, try it out for yourself!
 
-1. <a target="_blank" href="http://goo.gl/xCguvb">Github source code</a>
+1. <a target="_blank" href="http://goo.gl/Lu9TTc">Github source code</a>
 2. <a target="_blank" href="https://dormantroot.shinyapps.io/PredictIris/">R Shiny Application</a>
 
 
