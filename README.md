@@ -1,4 +1,4 @@
 Data-Science-Material-Coursera
 ==============================
 
-Study material from Coursera certification - Data Science
+Sample projects and code from my Data Science Certification (John Hopkins University)
