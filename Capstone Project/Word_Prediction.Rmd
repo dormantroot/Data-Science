@@ -4,26 +4,34 @@ output: html_document
 ---
 
 
-```{r echo=FALSE, message=FALSE, warning=FALSE, cache=TRUE}
-
-set.seed(3433)
+```{r setupEnvironment, include=FALSE, cache=FALSE}
 library(plyr)
 library(ggplot2)
 library(gridExtra)
 library(caret)
 library(tm)
+library(RWeka)
+library(R.utils)
+library(stringi)
+library(stringr)
 library(SnowballC)
 library(RColorBrewer)
 library(magrittr)
-library(RWeka)
 library(wordcloud)
-setwd("C:/Work/datasciencecoursera/Capstone Project/")
+library(textcat)
+library(xtable)
+
+blackList = read.csv("./Data/Terms-to-Block.csv", skip=4)
+blackList = blackList[,2]
+blackList = gsub(",","",blackList)
+
+source("./Utilities.R")
 ```
 
 ### Synopsis
 Pervasive computing has seen its share of growth with the advent of smart phones and tablets. These devices provide a pathway to bring intelligence closer to a person. One such intelligence is the concept of predicting words as you type on these devices. It could be as simple as typing a text message or as complex as writing a word document. Regardless of the scenario, the intelligence of predicting words based on what the user has already typed will immensly increase the usability factor, when it comes to using these devices.
 
-The goal of the project is to create such a predictive model, which by learning existing corpus, can provide suggestion to users as they use their smart phone or tablet keypads. The final model will be implemented in the form of an attractive Shiny app and will be avalable for the general public. However, to get to the final model, we'll have to traverse through the following stages/steps:
+The goal of this project is to create such a predictive model, which by learning existing corpus, can provide suggestions to users as they use their smart phone or tablet keypads. The final model will be implemented in the form of an attractive Shiny app and will be avalable for the general public. However, to get to the final model, we'll have to traverse through the following stages/steps:
 
 <ol>
   <li>Model Creation
@@ -46,403 +54,68 @@ Before a model can be created, the given dataset should be prepared, consumed an
 
 
 #### Preliminary Preparation
-The provided Corpus consist of three files which contains English text. We'll use the tm package to read data from these files.
+The provided Corpus consist of three files which contains English text. We'll use the <a href="http://cran.r-project.org/web/packages/tm/index.html" target="_blank">tm</a> R package to read data from these files.
 <ol>
   <li>en_US.blogs.txt   - contains text from various US blogs.</li>
   <li>en_US.news.txt    - contains text from various news sites</li>
   <li>en_US.twitter.txt - contains text from numerous twitter feeds</li>
 </ol>
 
-Considering the amount of data in each of the contents (blog, news, twitter), it doesn't seem practical to explore the entire content. Hence I'll randomly select 5000 lines from each content that would represent the larger content. Following is the exploration of the subset.
-
-```{r eval=TRUE, cache=TRUE}
-## It's assumed that the dataset exist in this path ./Data/Corpus/en_us
-filepath = file.path(".", "Data", "en_US")
-
-## Read data from the above three files
- docs = Corpus(DirSource(filepath))
-
-## Shrink data
-docs[[1]][[1]] = sample(docs[[1]][[1]],5000)
-docs[[2]][[1]] = sample(docs[[2]][[1]],5000)
-docs[[3]][[1]] = sample(docs[[3]][[1]],5000)
-
- usBlogs = docs[[1]]
- usNews = docs[[2]]
- usTwitter = docs[[3]]
-
+```{r readBlogProp, echo=FALSE, eval=TRUE}
+fileLineNum = CalculateTextFileLines("./Data/Corpus/en_US.blogs.txt")
+fileWordCount = CountWordsInTextFile("./Data/Corpus/en_US.blogs.txt")
 ```
 
-#### Inspect Provided Dataset
-
-#####Blog Content
-```{r eval=TRUE, cache=FALSE} 
-blogContent = usBlogs[[1]]
-blogContent[1:3]
-```
-
-Total number of lines
-```{r eval=TRUE, cache=FALSE}
-bloglineLength = as.numeric(unlist(lapply(blogContent, nchar)))
-length(bloglineLength)
-```
-
-Longest line and number of characters in that line
-```{r eval=TRUE, cache=FALSE}
-head(order(bloglineLength, decreasing=TRUE),1)
-bloglineLength[head(order(bloglineLength, decreasing=TRUE),1)]
-```
-
-Top 10 Single words
-```{r eval=TRUE, cache=FALSE}
-tk = NGramTokenizer(sample(blogContent,5000), Weka_control(min = 1, max = 1))
-tkSry = table(tk)
-dt = head(tkSry[order(tkSry, decreasing=TRUE)],10)
-df = as.data.frame(dt)
-ggplot(data=df, aes(x=rownames(df), y=dt)) + geom_bar(stat="identity") +  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + xlab("Word")+ ylab("Frequency")
-```
-
-Top 10 Bi-gram words 
-```{r eval=TRUE, cache=FALSE}
-tk = NGramTokenizer(sample(blogContent,5000), Weka_control(min = 2, max = 2))
-tkSry = table(tk)
-dt = head(tkSry[order(tkSry, decreasing=TRUE)],10)
-df = as.data.frame(dt)
-ggplot(data=df, aes(x=rownames(df), y=dt)) + geom_bar(stat="identity") +  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + xlab("Word")+ ylab("Frequency")
+#####Some interesting facts about the English blog corpus - en_US.blogs.txt
+```{r displayBlogProp, echo=FALSE, results='asis'}
+df  = data.frame("Number of Lines" = (fileLineNum),
+"Total Word Count (Millions)" = (fileWordCount/1E6))
+colnames(df) = c("Number of Lines", "Total Word Count (Millions)")
+print(xtable(df, display = c("s","f","f")),
+      type="html")
 ```
 
 
-
-#####News Content
-```{r eval=TRUE, cache=FALSE} 
-newsContent = usNews[[1]]
-newsContent[1:3]
+```{r readTwitterProp, echo=FALSE, eval=TRUE}
+fileLineNum = CalculateTextFileLines("./Data/Corpus/en_US.twitter.txt")
+fileWordCount = CountWordsInTextFile("./Data/Corpus/en_US.twitter.txt")
 ```
 
-Total number of lines
-```{r eval=TRUE, cache=FALSE}
-newlineLength = as.numeric(unlist(lapply(newsContent, nchar)))
-length(newlineLength)
+#####Some interesting facts about the English twitter corpus - en_US.twitter.txt
+```{r displayTwitterProp, echo=FALSE, results='asis'}
+df  = data.frame("Number of Lines" = (fileLineNum),
+"Total Word Count" = (fileWordCount/1E6))
+colnames(df) = c("Number of Lines", "Total Word Count (Millions)")
+print(xtable(df, display = c("s","f","f")),
+      type="html")
 ```
 
-Longest line and number of characters in that line
-```{r eval=TRUE, cache=FALSE}
-head(order(newlineLength, decreasing=TRUE),1)
-newlineLength[head(order(newlineLength, decreasing=TRUE),1)]
+```{r readNewsProp, echo=FALSE, eval=TRUE}
+fileLineNum = CalculateTextFileLines("./Data/Corpus/en_US.news.txt")
+fileWordCount = CountWordsInTextFile("./Data/Corpus/en_US.news.txt")
 ```
 
-Top 10 Single words
-```{r eval=TRUE, cache=FALSE}
-tk = NGramTokenizer(sample(newsContent,5000), Weka_control(min = 1, max = 1))
-tkSry = table(tk)
-dt = head(tkSry[order(tkSry, decreasing=TRUE)],10)
-df = as.data.frame(dt)
-ggplot(data=df, aes(x=rownames(df), y=dt)) + geom_bar(stat="identity") +  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + xlab("Word")+ ylab("Frequency")
-```
-
-Top 10 Bi-gram words 
-```{r eval=TRUE, cache=FALSE}
-tk = NGramTokenizer(sample(newsContent,5000), Weka_control(min = 2, max = 2))
-tkSry = table(tk)
-dt = head(tkSry[order(tkSry, decreasing=TRUE)],10)
-df = as.data.frame(dt)
-ggplot(data=df, aes(x=rownames(df), y=dt)) + geom_bar(stat="identity") +  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + xlab("Word")+ ylab("Frequency")
-```
-
-#####Twitter Content
-```{r eval=TRUE, cache=FALSE} 
-twitterContent = usTwitter[[1]]
-twitterContent[1:3]
-```
-
-Total number of lines
-```{r eval=TRUE, cache=FALSE}
-twitterlineLength = as.numeric(unlist(lapply(twitterContent, nchar)))
-length(twitterlineLength)
-```
-
-Longest line and number of characters in that line
-```{r eval=TRUE, cache=FALSE}
-head(order(twitterlineLength, decreasing=TRUE),1)
-twitterlineLength[head(order(twitterlineLength, decreasing=TRUE),1)]
-```
-
-Top 10 Single words
-```{r eval=TRUE, cache=FALSE}
-tk = NGramTokenizer(sample(twitterContent,5000), Weka_control(min = 1, max = 1))
-tkSry = table(tk)
-dt = head(tkSry[order(tkSry, decreasing=TRUE)],10)
-df = as.data.frame(dt)
-ggplot(data=df, aes(x=rownames(df), y=dt)) + geom_bar(stat="identity") +  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + xlab("Word")+ ylab("Frequency")
-```
-
-Top 10 Bi-gram words 
-```{r eval=TRUE, cache=FALSE}
-tk = NGramTokenizer(sample(twitterContent,5000), Weka_control(min = 2, max = 2))
-tkSry = table(tk)
-dt = head(tkSry[order(tkSry, decreasing=TRUE)],10)
-df = as.data.frame(dt)
-ggplot(data=df, aes(x=rownames(df), y=dt)) + geom_bar(stat="identity") +  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + xlab("Word")+ ylab("Frequency")
-```
-
-#### PreProcessing
-As you may be aware, the Corpus contains unnecessary words, punctuations, profanity etc. Pre-processing of the data will remedy this problem. Also, including these unwanted data in the final model will skew our prediction results.
-
-Removing characters like /, @, |
-```{r eval=TRUE, cache=TRUE}
-spaceFilter = content_transformer(function(x, pattern) gsub(pattern, " ", x))
-docs = tm_map(docs, spaceFilter, "/|@|\\|")
-
-```
-
-Convert text to lower case, remove numbers, remove punctuations, strip whitespaces
-```{r eval=TRUE, cache=TRUE}
-docs = tm_map(docs, content_transformer(tolower))
-docs = tm_map(docs, removeNumbers)
-docs = tm_map(docs, removePunctuation)
-docs = tm_map(docs, stripWhitespace)
-```
-
-Remove english stop words - common word endings for English, such as 'es', 'ed' and 's'.
-```{r  eval=TRUE, cache=TRUE}
-docs = tm_map(docs, removeWords, stopwords("english"))
-```
-
-Removing profanity words
-```{r eval=TRUE, cache=TRUE}
-profanity = VectorSource(readLines("Data/en_profanity.txt"))
-docs = tm_map(docs, removeWords, profanity)
+#####Some interesting facts about the English News corpus - en_US.news.txt
+```{r displayNewsProp, echo=FALSE, results='asis'}
+df  = data.frame("Number of Lines" = (fileLineNum),
+"Total Word Count" = (fileWordCount/1E6))
+colnames(df) = c("Number of Lines", "Total Word Count (Millions)")
+print(xtable(df, display = c("s","f","f")),
+      type="html")
 ```
 
 
-##### Exploratory Analysis
-First, create a Document Term Matrix for further exploration.
-```{r eval=TRUE, cache=TRUE}
-dtm = DocumentTermMatrix(docs)
-```
+##### Sampling
+Considering the amount of data in each of the contents (blog, news, twitter), it doesn't seem practical to explore the entire content. Hence I'll randomly select 1% from each content that would represent the larger content. Following is the exploration of the subset.
 
-Following is the list of top 25 most commonly occurring words in all three of the documents
-```{r eval=TRUE, cache=TRUE}
-freq = colSums(as.matrix(dtm))
-ord = order(freq)
-dt = freq[tail(ord,n=25)]
-df = as.data.frame(dt)
-ggplot(data=df, aes(x=rownames(df), y=dt)) + geom_bar(stat="identity") +  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + xlab("Word")+ ylab("Frequency")
+```{r sampling, echo=FALSE, results='hide', cache=TRUE}
+percentageToSample = 1
+outputTextFileDirectory = "./Data/OutputData"
 
-```
-
-Summary statistics of the top 25 commonly occuring words - the minimum, maximum and median
-```{r eval=TRUE, cache=TRUE}
-summary(df)
-```
-
-
-Words that occur less than 10 times and its frequency distribution. These words may be considered as insignificant and can possibly be removed from the final model.
-```{r eval=TRUE, cache=TRUE}
-freq = colSums(as.matrix(dtm))               
-freqLess10 = freq[which(freq < 10)]
-df = as.data.frame(table(freqLess10))
-ggplot(data=df, aes(x=freqLess10, y=Freq)) + geom_bar(stat="identity") +  xlab("Word Occurrance")+ ylab("Frequency")
-
-```
-
-
-
-Words that occur more than 1000 times
-```{r eval=TRUE, cache=TRUE}
-freq = colSums(as.matrix(dtm))
-dt = freq[which(freq>1000)]
-df = as.data.frame(dt)
-ggplot(data=df, aes(x=rownames(df), y=dt)) + geom_bar(stat="identity") +  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + xlab("Word")+ ylab("Frequency")
-```
-
-
-Word cloud of words that occur more than 500 times
-```{r eval=TRUE, cache=TRUE}
-freq = colSums(as.matrix(dtm))
-wordcloud(names(freq), freq, min.freq=500)
-```
-
-Finally, find those words that occur more than 500 times and create a correlation between the first 10 words whose relationship threshold is 0.5
-```{r eval=TRUE, cache=TRUE, message=FALSE, warning=FALSE}
-plot(dtm, terms=findFreqTerms(dtm, lowfreq=500)[1:10], corThreshold=0.5)
-```
-
-
-#### Training the Model and Predicting the Outcome
-
-Read the full corpus again. Setting eval=FALSE for the following chunks. When needed, set it to eval=TRUE. Keep in mind, however, that it will take time to process some of the chunks. Processing the below 8 chuncks will create the following files, which are necessary for chunks 9 onwards to function properly.
-dtm_bi_cleaned.csv
-dtm_bi_total.csv
-dtm_uni_cleaned.csv
-dtm_uni_total.csv
-
-```{r eval=FALSE, cache=TRUE}
-## It's assumed that the dataset exist in this path ./Data/Corpus/en_us
-filepath = file.path(".", "Data", "en_US")
-
-## Read data from the above three files
-docsOrg = Corpus(DirSource(filepath))
-docs = docsOrg
-
-```
-
-Removing characters like /, @, |
-```{r eval=FALSE, cache=TRUE}
-spaceFilter = content_transformer(function(x, pattern) gsub(pattern, " ", x))
-docs = tm_map(docs, spaceFilter, "/|@|\\|")
-
-```
-
-
-custom cleaning
-```{r eval=FALSE}
-clean_up = function(text) {
-    
-    clean.text = removePunctuation(gsub("\032", " ", text))
-    clean.text = gsub("\u2092", "'", clean.text)
-    clean.text = gsub("\u0093|\u0092|\u0094", " ", clean.text) 
-    clean.text = gsub("â€¦", "...", clean.text)
-    clean.text = gsub("â€“", "-", clean.text)
-    clean.text = gsub("â€", "-", clean.text)    
-    clean.text = gsub("â€™", "'", clean.text)  
-    clean.text = gsub("™", " ", clean.text)
-    clean.text = gsub("˜", " ", clean.text)
-    clean.text = gsub("\u2019", "'", clean.text)   
-      
-    clean.text
-}
-
-docs = tm_map(docs, content_transformer(clean_up))
+# Create random sample of corpus and save it
+CreateRandomCorpusSample("./Data/Corpus",
+                                  percentageToSample,
+                                  outputTextFileDirectory) 
 
 
 ```
-
-
-Convert text to lower case, remove numbers, remove punctuations, strip whitespaces
-```{r eval=FALSE, cache=TRUE}
-docs = tm_map(docs, content_transformer(tolower))
-docs = tm_map(docs, removeNumbers)
-docs = tm_map(docs, removePunctuation)
-docs = tm_map(docs, stripWhitespace)
-```
-
-Remove english stop words and perform Stemming - removing common word endings for English, such as 'es', 'ed' and 's'.
-```{r  eval=FALSE, cache=TRUE}
-docs = tm_map(docs, removeWords, stopwords("english"))
-docs = tm_map(docs, stripWhitespace)
-```
-
-Removing profanity words
-```{r eval=FALSE, cache=TRUE}
-profanity = VectorSource(readLines("Data/en_profanity.txt"))
-docs = tm_map(docs, removeWords, profanity)
-```
-
-Create unigram word frequency and save to file
-```{r eval=FALSE, cache=TRUE}
-docs = tm_map(docs, removeWords, profanity)
-dtm_uni = DocumentTermMatrix(docs)
-dtm_uni_total = colSums(as.matrix(dtm_uni))
-write.table(dtm_uni_total, file="submit/dtm_uni_total.csv", sep=" ")
-```
-
-The following code creates bigram frequency data frame in this format - bigram bFreq    gram1 gram1Ind      gram2 gram2Ind. The biigram data frame will contain only those valid words that exist in the dictionary. The resulting data frame is split into two and saved into two files - dtm_bi_test.csv & dtm_bi_train.csv
-```{r eval=FALSE, cache=TRUE}
-BigramTokenizer = function(x) NGramTokenizer(x, Weka_control(min = 2, max = 2))
-dtm_bi = DocumentTermMatrix(docs, control = list(tokenize= BigramTokenizer))
-dtm_bi_total = colSums(as.matrix(dtm_bi))
-
-############ retrieve the list of valid words
-valid_eng = read.csv("Data/corncob_lowercase.csv", header = TRUE, sep = ",", stringsAsFactors=FALSE)
-words = as.vector(valid_eng$Word)
-
-########### calculate bigram probability
-#gram 1
-dtm_bi_total$gram1 = rapply(strsplit(dtm_bi_total$bigram, " "), function(x) head(x, 1))
-gram1Ind = match(dtm_bi_total$gram1, words, nomatch=-1)
-q = cbind(dtm_bi_total,gram1Ind)
-q = q[which(q$gram1Ind >-1),]
-
-#gram 2
-q$gram2 = rapply(strsplit(q$bigram, " "), function(x) tail(x, 1))
-gram2Ind = match(q$gram2, words, nomatch=-1)
-q = cbind(q,gram2Ind)
-q = q[which(q$gram2Ind >-1),]
-q = q[which(q$gram1Ind!=q$gram2Ind),]
-q = rename(q, c("x"="bFreq"))
-
-# splitting into test and training, and saving it
-splitdf <- function(dataframe, seed=NULL) {
-    if (!is.null(seed)) set.seed(seed)
-    index <- 1:nrow(dataframe)
-    trainindex <- sample(index, trunc(length(index)/2))
-    trainset <- dataframe[trainindex, ]
-    testset <- dataframe[-trainindex, ]
-    list(trainset=trainset,testset=testset)
-}
-splits = splitdf(q, seed=808)
-write.table(splits$testset, file="submit/dtm_bi_test.csv", sep=" ")
-write.table(splits$trainset, file="submit/dtm_bi_train.csv", sep=" ")
-```
-
-The following code creates unigram frequency data frame in this format - unigram, unigram frequency & index of unigram in valid word dictionary. The unigram data frame will contain only those valid words that exist in the dictionary. The result is saved to a file
-```{r eval=TRUE, cache=TRUE}
-########### unigram
-dtm_uni_total = read.csv("submit/dtm_uni_total.csv", header = TRUE, sep = " ", stringsAsFactors=FALSE) 
-index = match(dtm_uni_total$word, words, nomatch=-1)
-p = cbind(dtm_uni_total,index)
-p = p[which(p$index >-1),]
-write.table(p, file="submit/dtm_uni_cleaned.csv", sep=" ")
-p = read.csv("submit/dtm_uni_cleaned.csv", header = TRUE, sep = " ", stringsAsFactors=FALSE) 
-```
-
-
-Combining and calculating bigram probability. Save result (only half of it) to file
-```{r eval=TRUE }
-q = read.csv("submit/dtm_bi_train.csv", header = TRUE, sep = " ", stringsAsFactors=FALSE) 
-
-# combining and calculating probability
-uFreqInd = match(q$gram1Ind, p$index, nomatch=-1)
-q = cbind(q,ind=uFreqInd)
-q = q[which(q$ind>-1),]
-q = cbind(q[,1:6], uFreq = p[q$ind,c("x")])
-q = cbind(q, prob=round(((-1)*(log(q$bFreq/q$uFreq))), digits=3))
-pro = cbind(q$gram1Ind,q$gram2Ind,q$prob)
-pro = as.data.frame(pro)
-dim(pro)[1]/2
-splits = splitdf(pro, seed=808)
-
-write.table(splits[1], file="submit/dtm_bi_train_prob_shrunk.csv", sep=" ")
-```
-
-Simple prediction function based on the highest probability value.
-```{r eval=TRUE}
-
-pred = function(sentence){  
-  
-  unigrams = rev(strsplit(tolower(sentence), " ")[[1]])
-  for(unigram in unigrams){     
-    unigramInd = which(words==unigram)
-    b = pro[which(pro$V1==unigramInd),]     
-    
-    if(nrow(b) > 0){   
-      bigramInd = head(b[order(-b$V3),],1)
-      return (words[bigramInd$V2])
-    }
-  }
-  
-  return (sample(words,1))
-}
-
-pred("conditions have been increasing since the mid-1990s and the advent")
-```
-
-Enchancements:
-When time permits, create trigram, quardgram and pentgrams to get better accuracy. Then learn how to create a machine learning model out of these Ngrams and use that for prediction.
-
-
-#### Analyze Accuracy of the Model
-***********TO DO LATER WHEN AN ACTUAL MODEL IS CREATED*************** 
-### Applying the Model
-The model is applied in a R shiny application, which can be accessed here<LINK>. 
