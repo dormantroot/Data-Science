@@ -20,9 +20,10 @@ Here are the steps:
 
 The Internal of the Applications
 ========================================================
-<p>Here's how the application's final model was created.</p>
+<p>At the core, the application uses Trigram Markov model for prediction.</p> You can read more about it here <a target="_blank" href="http://nlpwp.org/book/chap-ngrams.xhtml#chap-ngrams-markov-models">N-grams using Markov Models</a>. Also, you can read more about the application <a target="_blank" href="https://github.com/dormantroot/Data-Science/blob/master/Capstone%20Project/Word_Prediction.Rmd">here</a>
 
-![plot of chunk unnamed-chunk-2](PredictWord_Internal.png) 
+The accuracy of the application is not very impressive. I hope to increase it the next iteration/release.
+
 
 
 How Do I Get my Hands on the Application?
@@ -30,3 +31,5 @@ How Do I Get my Hands on the Application?
 Now, try it out for yourself!
 
 <a target="_blank" href="http://dormantroot.shinyapps.io/PredictWord/">PredictWord - An Intuitive Shiny Application</a>
+
+<a target="_blank" href="https://github.com/dormantroot/Data-Science/tree/master/Capstone%20Project/PredictWord"> Here's the source code</a>

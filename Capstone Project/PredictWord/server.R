@@ -1,18 +1,39 @@
+options(shiny.maxRequestSize=95*1024^2)
+
 library(shiny)
 library(shinyIncubator)
+library(rJava)
+library(RWeka)
+library(R.utils)
+library(stringi)
+library(stringr)
+library(shiny)
+library(textcat)
+library(tm)
+library(markovchain)
+source("./predictNextWord.R")
 
-# Define server logic required to draw a histogram
+# Read all the necessary files before starting
 shinyServer(function(input, output, session) {
-
-  readData = reactive({
-    withProgress(session,{
-      print("read file")
-      # read bigram probability
-      bigram_pr = read.csv("dtm_bi_train_prob_shrunk.csv", header = TRUE, sep = " ", stringsAsFactors=FALSE)
-      valid_eng = read.csv("corncob_lowercase.csv", header = TRUE, sep = ",", stringsAsFactors=FALSE)
-      words = as.vector(valid_eng$Word)
-      return (list("prob" = bigram_pr, "words" = words))
-    })     
+  
+  
+  # Read data
+  readData = reactive({  
+    
+    # Read data
+    blackList = read.csv("./Terms-to-Block.csv", skip=4)
+    blackList = blackList[,2]
+    blackList = gsub(",","",blackList) 
+    
+    # read transition matrix that was created during modeling
+    load(file="./transitionMatrix.RData")
+    
+    # create markovs predictor   
+    textPredictor = new("markovchain", transitionMatrix=transitionMatrix)
+    rm(transitionMatrix) 
+  
+    # return
+    return (list("blacklist" = blackList, "markovPredict" = textPredictor))     
   });
   
   
@@ -21,65 +42,63 @@ shinyServer(function(input, output, session) {
   ####################################################################################################
   ####################################### Prediction #################################################
   ####################################################################################################
-  predictWord = reactive({tryCatch({
-    withProgress(session, {
-      
-      # Provides a progress output
-      setProgress(detail = "Preparing the model, this may take a moment...")      
-      trim = function (x) gsub("^\\s+|\\s+$", "", x)     
-      
-      # Read data
-      data = readData() 
-      
-      # probablity
-      pro = data$prob
-      
-      # list of valid words
-      words = data$words
-       
-      # Prediction function
-      pred = function(sentence){  
-        
-        unigrams = rev(strsplit(tolower(sentence), " ")[[1]])
-        for(unigram in unigrams){     
-          unigramInd = which(words==unigram)
-          b = pro[which(pro$V1==unigramInd),]     
-          
-          if(nrow(b) > 0){   
-            bigramInd = head(b[order(-b$V3),],1)
-            print(words[bigramInd$V2])
-            return (words[bigramInd$V2])
-          }
-        }
-        
-        return (sample(words,1))
-      }
-      
-      # Predict the next word
-      nextWord = pred(tolower(trim(toString(input$sPhrase))))    
-      
-      # Return the next predicted word
-      return (paste("Based on the phrase/sentence/word you entered, the next highly probable word is: ", toupper(toString(nextWord))))      
-    })   
+  predictWord = function(updateProgress = NULL){tryCatch({
+   
+    # Initialize 
+    updateProgress(detail = "Working hard..... Predicting is not easy! :) ")      
+    data = readData()
     
-  }, error = function(err){
     
-    return (paste("Couldn't predict the next word; encountered this error: ", err))
-  }, finally = {
+    #Predicting
+    currentPhrase = preprocessTextInput(input$sPhrase, data$blackList)
+    if (length(currentPhrase) > 0) {    
+      textPrediction = predictNextWord(currentPhrase, 1,  data$markovPredict)        
+      predictedNextWord = t(as.matrix(textPrediction$conditionalProbability))        
+      rownames(predictedNextWord) = "P(term)"     
+      nextWord = (colnames(predictedNextWord)[1])
+    }        
     
-  } 
-  )})
+    # Return the next predicted word
+    return (paste("Based on the phrase/sentence/word you entered, the next highly probable word is: ", toupper(toString(nextWord))))    
+  }, error = function(err){    
+    return (paste("Couldn't predict the Iris species; encountered this error: ", err))
+  }, finally = {} 
+  )}
   
+  
+  ## Render results
   output$result = renderText({    
-        
+    
     # Respond to 'predict' button click only
     input$predict
     
     # User isolate to avoid dependency on other inputs
-    isolate({      
-      predictWord() 
+    isolate({       
+     
+      # Create a Progress object
+      progress <- shiny::Progress$new()
+      progress$set(message = "", value = 0)
+      
+      # Close the progress when this reactive exits (even if there's an error)
+      on.exit(progress$close())
+      
+      # Create a closure to update progress.
+      # Each time this is called:
+      # - If `value` is NULL, it will move the progress bar 1/5 of the remaining
+      #   distance. If non-NULL, it will set the progress to that value.
+      # - It also accepts optional detail text.
+      updateProgress <- function(value = NULL, detail = NULL) {
+        if (is.null(value)) {
+          value <- progress$getValue()
+          value <- value + (progress$getMax() - value) / 5
+        }
+        progress$set(value = value, detail = detail)
+      }
+      
+      # Find the next word
+      predictWord(updateProgress)     
     }) 
-   
+    
     
   })
 })

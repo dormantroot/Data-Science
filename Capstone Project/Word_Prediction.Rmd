@@ -20,12 +20,15 @@ library(magrittr)
 library(wordcloud)
 library(textcat)
 library(xtable)
+library(markovchain)
 
 blackList = read.csv("./Data/Terms-to-Block.csv", skip=4)
 blackList = blackList[,2]
 blackList = gsub(",","",blackList)
 
 source("./Utilities.R")
+source("./Prediction_Utilities.R")
+source("./EvaluateTextPredictorPerformance.R")
 ```
 
 ### Synopsis
@@ -40,20 +43,21 @@ The goal of this project is to create such a predictive model, which by learning
       <li>Inspect Provided Dataset</li>
       <li>PreProcessing</li>
       <li>Exploratory Analysis</li>
-      <li>Training the Model and Predicting the Outcome</li>
-      <li>Analyze Accuracy of the Model</li>
+      <li>Modeling and Analyzing accuracy of the Model</li>
     </ol>
   </li>
   <li>Applying the Model</li> 
 </ol>
-
-The dataset for this project is available at this <a href="https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip" target="_blank">location</a>
 
 ### Model Creation
 Before a model can be created, the given dataset should be prepared, consumed and explored. Below are the corresponding code snippets and explanations.
 
 
 #### Preliminary Preparation
+The dataset for this project is available at this <a href="https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip" target="_blank">location</a>. <b>Before proceeding, make sure you unzip the file and store them in this location ./Data/Corpus , which is expected by the remainder of this document</b>. The next item to download is the blacklisted words - words that vulgar and profane. These words will be removed from the provided corpus. The csv file 'Terms-to-Block' can be downloaded from this <a href="http://www.frontgatemedia.com/new/wp-content/uploads/2014/03/Terms-to-Block.csv" 
+target="_blank">location</a>. Make sure the file is saved to this location ./Data
+
+#### Inspect Provided Dataset
 The provided Corpus consist of three files which contains English text. We'll use the <a href="http://cran.r-project.org/web/packages/tm/index.html" target="_blank">tm</a> R package to read data from these files.
 <ol>
   <li>en_US.blogs.txt   - contains text from various US blogs.</li>
@@ -62,8 +66,8 @@ The provided Corpus consist of three files which contains English text. We'll us
 </ol>
 
 ```{r readBlogProp, echo=FALSE, eval=TRUE}
-fileLineNum = CalculateTextFileLines("./Data/Corpus/en_US.blogs.txt")
-fileWordCount = CountWordsInTextFile("./Data/Corpus/en_US.blogs.txt")
+fileLineNum = CalculateTextFileLines("./Data/Corpus/en_US/en_US.blogs.txt")
+fileWordCount = CountWordsInTextFile("./Data/Corpus/en_US/en_US.blogs.txt")
 ```
 
 #####Some interesting facts about the English blog corpus - en_US.blogs.txt
@@ -75,10 +79,9 @@ print(xtable(df, display = c("s","f","f")),
       type="html")
 ```
 
-
 ```{r readTwitterProp, echo=FALSE, eval=TRUE}
-fileLineNum = CalculateTextFileLines("./Data/Corpus/en_US.twitter.txt")
-fileWordCount = CountWordsInTextFile("./Data/Corpus/en_US.twitter.txt")
+fileLineNum = CalculateTextFileLines("./Data/Corpus/en_US/en_US.twitter.txt")
+fileWordCount = CountWordsInTextFile("./Data/Corpus/en_US/en_US.twitter.txt")
 ```
 
 #####Some interesting facts about the English twitter corpus - en_US.twitter.txt
@@ -91,8 +94,8 @@ print(xtable(df, display = c("s","f","f")),
 ```
 
 ```{r readNewsProp, echo=FALSE, eval=TRUE}
-fileLineNum = CalculateTextFileLines("./Data/Corpus/en_US.news.txt")
-fileWordCount = CountWordsInTextFile("./Data/Corpus/en_US.news.txt")
+fileLineNum = CalculateTextFileLines("./Data/Corpus/en_US/en_US.news.txt")
+fileWordCount = CountWordsInTextFile("./Data/Corpus/en_US/en_US.news.txt")
 ```
 
 #####Some interesting facts about the English News corpus - en_US.news.txt
@@ -104,18 +107,218 @@ print(xtable(df, display = c("s","f","f")),
       type="html")
 ```
 
-
+#### PreProcessing
 ##### Sampling
-Considering the amount of data in each of the contents (blog, news, twitter), it doesn't seem practical to explore the entire content. Hence I'll randomly select 1% from each content that would represent the larger content. Following is the exploration of the subset.
+Considering the amount of data in each of the contents (blog, news, twitter), it doesn't seem practical to explore the entire content. Hence I'll randomly select 0.1% from each content that would represent the larger content.
 
-```{r sampling, echo=FALSE, results='hide', cache=TRUE}
-percentageToSample = 1
+##### Cleaning
+The next obvious step is to combine the 0.1% sample data from each content and clean them. Cleaning includes the following:
+<ol>
+  <li>remove non-ASCII characters</li>
+  <li>remove punctuation</li>
+  <li>remove whitespace</li>
+  <li>convert text to lower case</li>
+  <li>remove profane/vulgar words contained in the black list</li>
+</ol>
+
+```{r samplingAndCleaning, echo=FALSE, results='hide', cache=TRUE, warning=FALSE}
+percentageToSample = 0.1
 outputTextFileDirectory = "./Data/OutputData"
 
-# Create random sample of corpus and save it
-CreateRandomCorpusSample("./Data/Corpus",
+# Create random sample of corpus and save it. If random sample exist, overwrite it
+CreateRandomCorpusSample("./Data/Corpus/en_US",
                                   percentageToSample,
                                   outputTextFileDirectory) 
 
+# Iterate through each of the files that was created above, create
+# the corresponding corpus and save the data in an Rdata format
+corpusFileName = file.path(outputTextFileDirectory,"CombinedCorpus.Rdata")
+corpusList = list()
+
+for(file in dir(outputTextFileDirectory, pattern="(.)*.txt")) {
+  corpusList[[file]]  = LoadCorpusFromTextFile(paste0(outputTextFileDirectory,"/",file), blackList)
+}  
+save(file=corpusFileName, corpusList)
+
+# Combine all three corpus
+sampledTextFiles = names(corpusList)
+for (n in seq_len(length(sampledTextFiles))) {
+    if (n == 1){
+        combinedCorpus = corpusList[[sampledTextFiles[n]]]
+    } else {
+        combinedCorpus = c(combinedCorpus, corpusList[[sampledTextFiles[n]]])
+    } 
+}
 
 ```
+
+
+#### Exploratory Analysis
+Now that we have sampled, combined and cleansed the sample corpus, the next step is to do EDA - Exploratory Data Analysis
+
+First, create a Document Term Matrix and inspect its content.
+```{r exploration, echo=FALSE, results='asis', cache=TRUE, warning=FALSE}
+
+# Create document matrix from the combined corpus
+tdm = TermDocumentMatrix(combinedCorpus)
+```
+
+##### Some interesting facts about the single words (Unigrams)
+<b>Top 10 frequently occuring Unigrams in the sampled-combined corpus</b>
+```{r unigrams, echo=FALSE, results='asis', cache=TRUE, warning=FALSE}
+termFreqs = sort(rowSums(as.matrix(tdm)), decreasing=TRUE)
+termFreqs = 100*(termFreqs / sum(termFreqs))
+termFreqsTopTwenty = head(termFreqs, 20)
+# http://www.r-bloggers.com/using-r-barplot-with-ggplot2/
+qplot(names(termFreqsTopTwenty),
+      termFreqsTopTwenty,
+      main="Top 20 Popular Unigrams",
+      geom="bar",
+      stat="identity",
+      xlab="Word",
+      ylab="% of occurance")  + theme_gray(base_size=14) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+rm(termFreqs)
+```
+
+
+##### Some interesting facts about the double words (Bigrams)
+<b>Top 10 frequently occuring Bigrams in the sampled-combined corpus</b>
+```{r bigrams, echo=FALSE, results='asis', cache=TRUE, warning=FALSE}
+
+bigram_DTM = as.matrix(GenerateBigramTermDocumentMatrix(combinedCorpus))
+bigramFreqs = sort(rowSums(bigram_DTM), decreasing=TRUE)
+bigramFreqs = 100*bigramFreqs / sum(bigramFreqs)
+bigramFreqsTopTwenty = head(bigramFreqs, 20)
+
+qplot(names(bigramFreqsTopTwenty),
+      bigramFreqsTopTwenty,
+      main="Top 20 Popular Bigrams",
+      geom="bar",
+      stat="identity",
+      xlab="Bigram",
+      ylab="% of occurance") + theme_gray(base_size=14) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+rm(bigramFreqs)
+rm(bigram_DTM)
+```
+
+##### Some interesting facts about the triple words (Trigrams)
+<b>Top 10 frequently occuring trigrams in the sampled-combined corpus</b>
+```{r trigrams, echo=FALSE, results='asis', cache=TRUE, warning=FALSE}
+
+trigram_DTM = as.matrix(GenerateTrigramTermDocumentMatrix(combinedCorpus))
+trigramFreqs = sort(rowSums(trigram_DTM), decreasing=TRUE)
+trigramFreqs = 100*trigramFreqs / sum(trigramFreqs)
+trigramFreqsTopTwenty = head(trigramFreqs, 20)
+
+qplot(names(trigramFreqsTopTwenty),
+      trigramFreqsTopTwenty,
+      main="Top 20 Popular Trigrams",
+      geom="bar",
+      stat="identity",
+      xlab="Trigram",
+      ylab="% of occurance") + theme_gray(base_size=14) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+rm(trigramFreqs)
+rm(trigram_DTM)
+```
+
+
+#### Modeling and Analyzing Accuracy of the Model
+As I mentioned earlier, the key goal of this project is to create a model that can predict words. This section focuses on the prediction aspect of this project. We'll be using the 'N-Gram Language Model' for prediction. Specifically, the Trigram Markov Model. 
+
+First, let's split each of the content into three files *_TrainingData.txt, *_TestData.txt and *_ValidationData.txt. Replace * with the content names:
+<ol>
+  <li>en_US.blogs.txt   - contains text from various US blogs.</li>
+  <li>en_US.news.txt    - contains text from various news sites</li>
+  <li>en_US.twitter.txt - contains text from numerous twitter feeds</li>
+</ol>
+```{r splitfile, echo=FALSE, results='asis', cache=TRUE, warning=FALSE}
+inputTextDataPath = "./Data/Corpus/en_US"
+outputTextFileDirectory = "./Data/OutputData"
+blackList = read.csv("./Data/Terms-to-Block.csv", skip=4)
+blackList = blackList[,2]
+blackList = gsub(",","",blackList)
+
+# Split contents of each text file into training, test and validation, and save
+# resulting data into three separate files - training, validation and test
+splitTextFiles(inputTextDataPath, outputTextFileDirectory, num_lines)
+```
+
+Next, create unigrams from all of the *TrainingData.txt files that were created in the above step. From the unigram list, create TermDocumentMatrix and from that create the term frequency table ['count','unigram']. Save the resulting term frequency table to *TrainingDataTerms.RData file.
+Then iterate through each of the *TrainingDataTerms.RData files and find unigrams whose frequencies are above 0.68. Save those unigrams in commonTerms.RData file.
+```{r unigramanalysis, echo=FALSE, results='asis', cache=TRUE, warning=FALSE}
+## Analyze the unigrams in each of *TrainingData.txt files
+outputTextFileDirectory = "./Data/OutputData"
+analyzeTextDataUnigramStatistics(outputTextFileDirectory, ".*TrainingData.txt", blackList)
+findCommonTerms(outputTextFileDirectory, 0.68)
+```
+
+Next, create a trigram transition matrix for each of the *TrainingData.txt files and save it as *_TransitionMatrix.RData file. Then combine each of the trigram transition matrix and save the resulting transition matrix as transitionMatrix.RData file. This file is what we'll use for prediction within the Shiny application.
+```{r trigramtransitionmatrix, echo=FALSE, results='asis', cache=TRUE, warning=FALSE}
+outputTextFileDirectory = "./Data/OutputData"
+load(file.path(outputTextFileDirectory,"commonTerms.RData"))
+constructTransitionMatrix(outputTextFileDirectory, commonTerms, blackList)
+```
+
+Load the transition matrix and explore the vocabulary count
+```{r tmanalysis, echo=FALSE, results='asis', cache=TRUE, warning=FALSE}
+# Load transition matrix saved in each of the following files
+# 1. en_US.blogs_TrainingData_TransitionMatrix.RData
+# 2. en_US.twitter_TrainingData_TransitionMatrix.RData
+# 3. en_US.news_TrainingData_TransitionMatrix.RData
+transitionMatrixList = loadTransitionMatrices("./Data/OutputData")
+
+# create the following for graphing purposes
+vocabularyDistribution = initializeVocabularyDistribution(transitionMatrixList)
+ggplot(vocabularyDistribution,
+       aes(x=vocabularyindex,
+           y=counts,
+           colour=type,
+           fill=type)) + geom_point(size=2) + facet_wrap(~type) + 
+    scale_color_brewer(palette="Dark2") + scale_fill_brewer(palette="Dark2") + 
+    theme_gray(base_size = 14) + xlab("Vocabulary Index") + 
+    ylab("Counts / Vocabulary Size")
+```
+
+Create an average transition matrix from the matrix created above. Save the resulting matrix, along with a new markovchain text predictor in file 'analyzeTransitionMatrix'
+```{r textpredictor, echo=FALSE, results='asis', cache=TRUE, warning=FALSE}
+
+# Create average transition matrix, along with Markovchain text predictor
+averageTransitionMatrix = constructAverageTransitionMatrix(transitionMatrixList)
+textPredictor =   new("markovchain",  transitionMatrix=averageTransitionMatrix[["transitionMatrix"]])
+save(file="./analyzeTransitionMatrix.RData", textPredictor, averageTransitionMatrix)
+```
+
+Now, let's evaulate the text predictor. The results of the evaluation is saved in './Data/OutputData/Eval.RData' file.
+```{r evaluatetextpredictor, echo=FALSE, results='asis', cache=TRUE, warning=FALSE}
+load(file="./analyzeTransitionMatrix.RData")
+
+transitionMatrix = averageTransitionMatrix[["transitionMatrix"]]
+predictorEvalParams = list()
+predictorEvalParams[["textPredictor"]] = textPredictor
+rm(textPredictor)
+rm(averageTransitionMatrix)
+
+predictorEvalParams[["textFileDirectory"]] = "./Data/OutputData"
+predictorEvalParams[["blackList"]] = blackList
+
+testDataEval = evaluateTextPredictorPerformance(predictorEvalParams,".*TestData.txt")
+```
+
+
+#### Applying the Model
+Finally, let's apply the model. The result is an intuitive Shiny application which you can try out here <a target="_blank" href="http://dormantroot.shinyapps.io/PredictWord/">PredictWord - An Intuitive Shiny Application</a>. Here's the source 
+<a target="_blank" href="https://github.com/dormantroot/Data-Science/tree/master/Capstone%20Project/PredictWord"> code</a>
+
+
+#### References
+<ul>
+  <li> <a target="_blank" href="http://nlpwp.org/book/chap-ngrams.xhtml"> N-grams Language Modeling</a> </li>
+  <li> <a target="_blank" href="http://www.statmt.org/book/slides/07-language-models.pdf"> Language Models</a> </li> 
+  <li> <a target="_blank" href="https://github.com/datasciencespm/DataScienceCapstone"> Reference Application</a> </li> 
+</ul>
